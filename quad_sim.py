@@ -44,6 +44,8 @@ def Single_Point2Point():
                 gui_object.quads['q1']['position'] = quad.get_position('q1')
                 gui_object.quads['q1']['orientation'] = quad.get_orientation('q1')
                 gui_object.update()
+                if (run == False):
+                    break;
     quad.stop_thread()
     ctrl.stop_thread()
 
@@ -147,7 +149,6 @@ def signal_handler(signal, frame):
     global run
     run = False
     print('Stopping')
-    sys.exit(0)
 
 if __name__ == "__main__":
     args = parse_args()
