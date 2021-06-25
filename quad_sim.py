@@ -1,6 +1,5 @@
 import quadcopter,gui,controller
 import signal
-import sys
 import argparse
 
 # Constants
@@ -36,16 +35,15 @@ def Single_Point2Point():
     quad.start_thread(dt=QUAD_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
     ctrl.start_thread(update_rate=CONTROLLER_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
     # Update the GUI while switching between destination poitions
-    while(run==True):
-        for goal,y in zip(GOALS,YAWS):
-            ctrl.update_target(goal)
-            ctrl.update_yaw_target(y)
-            for i in range(300):
-                gui_object.quads['q1']['position'] = quad.get_position('q1')
-                gui_object.quads['q1']['orientation'] = quad.get_orientation('q1')
-                gui_object.update()
-                if (run == False):
-                    break;
+    for goal,y in zip(GOALS,YAWS):
+        if (run == False): break
+        ctrl.update_target(goal)
+        ctrl.update_yaw_target(y)
+        for i in range(300):
+            if (run == False): break
+            gui_object.quads['q1']['position'] = quad.get_position('q1')
+            gui_object.quads['q1']['orientation'] = quad.get_orientation('q1')
+            gui_object.update()
     quad.stop_thread()
     ctrl.stop_thread()
 
@@ -88,15 +86,16 @@ def Multi_Point2Point():
     ctrl1.start_thread(update_rate=CONTROLLER_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
     ctrl2.start_thread(update_rate=CONTROLLER_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
     # Update the GUI while switching between destination poitions
-    while(run==True):
-        for goal1,goal2 in zip(GOALS_1,GOALS_2):
-            ctrl1.update_target(goal1)
-            ctrl2.update_target(goal2)
-            for i in range(150):
-                for key in QUADCOPTERS:
-                    gui_object.quads[key]['position'] = quad.get_position(key)
-                    gui_object.quads[key]['orientation'] = quad.get_orientation(key)
-                gui_object.update()
+    for goal1,goal2 in zip(GOALS_1,GOALS_2):
+        if (run == False): break;
+        ctrl1.update_target(goal1)
+        ctrl2.update_target(goal2)
+        for i in range(150):
+            if (run == False): break;
+            for key in QUADCOPTERS:
+                gui_object.quads[key]['position'] = quad.get_position(key)
+                gui_object.quads[key]['orientation'] = quad.get_orientation(key)
+            gui_object.update()
     quad.stop_thread()
     ctrl1.stop_thread()
     ctrl2.stop_thread()
@@ -127,13 +126,14 @@ def Single_Velocity():
     quad.start_thread(dt=QUAD_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
     ctrl.start_thread(update_rate=CONTROLLER_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
     # Update the GUI while switching between destination poitions
-    while(run==True):
-        for goal in GOALS:
-            ctrl.update_target(goal)
-            for i in range(150):
-                gui_object.quads['q1']['position'] = quad.get_position('q1')
-                gui_object.quads['q1']['orientation'] = quad.get_orientation('q1')
-                gui_object.update()
+    for goal in GOALS:
+        if (run == False): break;
+        ctrl.update_target(goal)
+        for i in range(150):
+            if (run == False): break;
+            gui_object.quads['q1']['position'] = quad.get_position('q1')
+            gui_object.quads['q1']['orientation'] = quad.get_orientation('q1')
+            gui_object.update()
     quad.stop_thread()
     ctrl.stop_thread()
 
@@ -148,7 +148,7 @@ def parse_args():
 def signal_handler(signal, frame):
     global run
     run = False
-    print('Stopping')
+    print('Stopping...')
 
 if __name__ == "__main__":
     args = parse_args()
