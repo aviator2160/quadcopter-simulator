@@ -88,11 +88,10 @@ def Multi_Point2Point():
     ctrl2.start_thread(update_rate=CONTROLLER_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
     # Update the GUI while switching between destination poitions
     for goal1,goal2 in zip(GOALS_1,GOALS_2):
-        if (run == False): break;
         ctrl1.update_target(goal1)
         ctrl2.update_target(goal2)
         for i in range(150):
-            if (run == False): break;
+            if (run == False or gui_object.quit == True): break
             for key in QUADCOPTERS:
                 gui_object.quads[key]['position'] = quad.get_position(key)
                 gui_object.quads[key]['orientation'] = quad.get_orientation(key)
@@ -128,10 +127,9 @@ def Single_Velocity():
     ctrl.start_thread(update_rate=CONTROLLER_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
     # Update the GUI while switching between destination poitions
     for goal in GOALS:
-        if (run == False): break;
         ctrl.update_target(goal)
         for i in range(150):
-            if (run == False): break;
+            if (run == False or gui_object.quit == True): break
             gui_object.quads['q1']['position'] = quad.get_position('q1')
             gui_object.quads['q1']['orientation'] = quad.get_orientation('q1')
             gui_object.update()
