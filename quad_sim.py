@@ -1,11 +1,13 @@
 import quadcopter,gui,controller
 import signal
 import argparse
+import datetime
 
 # Constants
-TIME_SCALING = 1.0 # Any positive number(Smaller is faster). 1.0->Real Time, 0.0->Run as fast as possible
+TIME_SCALING = 10.0 # Any positive number(Smaller is faster). 1.0->Real Time, 0.0->Run as fast as possible
 QUAD_DYNAMICS_UPDATE = 0.002 # seconds
 CONTROLLER_DYNAMICS_UPDATE = 0.005 # seconds
+GUI_FRAMERATE = 10 # frames per second
 run = True
 
 def Single_Point2Point():
@@ -28,24 +30,23 @@ def Single_Point2Point():
     # Catch Ctrl+C to stop threads
     signal.signal(signal.SIGINT, signal_handler)
     # Make objects for quadcopter, gui and controller
-    quad = quadcopter.Quadcopter(QUADCOPTER)
-    gui_object = gui.GUI(quads=QUADCOPTER)
-    ctrl = controller.Controller_PID_Point2Point(quad.get_state,quad.get_time,quad.set_motor_speeds,params=CONTROLLER_PARAMETERS,quad_identifier='q1')
-    # Start the threads
-    quad.start_thread(dt=QUAD_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
-    ctrl.start_thread(update_rate=CONTROLLER_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
+    quad = quadcopter.Quadcopter(QUADCOPTER,dt=QUAD_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
+    gui_object = gui.GUI(quads=QUADCOPTER,framerate=GUI_FRAMERATE)
+    ctrl = controller.Controller_PID_Point2Point(quad.get_state,quad.get_time,quad.set_motor_speeds,params=CONTROLLER_PARAMETERS,dt=CONTROLLER_DYNAMICS_UPDATE,time_scaling=TIME_SCALING,quad_identifier='q1')
     # Update the GUI while switching between destination poitions
     for goal,y in zip(GOALS,YAWS):
+        start = quad.get_time()
         if (run == False): break
         ctrl.update_target(goal)
         ctrl.update_yaw_target(y)
-        for i in range(300):
+        while((quad.get_time() - start).total_seconds() < 10):
+            print((datetime.datetime.now() - start).total_seconds())
             if (run == False): break
-            gui_object.quads['q1']['position'] = quad.get_position('q1')
-            gui_object.quads['q1']['orientation'] = quad.get_orientation('q1')
-            gui_object.update()
-    quad.stop_thread()
-    ctrl.stop_thread()
+            quad.check_update()
+            ctrl.check_update()
+        gui_object.quads['q1']['position'] = quad.get_position('q1')
+        gui_object.quads['q1']['orientation'] = quad.get_orientation('q1')
+        gui_object.check_update()
 
 def Multi_Point2Point():
     # Set goals to go to

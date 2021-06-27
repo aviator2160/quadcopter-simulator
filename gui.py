@@ -2,13 +2,17 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as Axes3D
+import datetime
 import sys
 
 class GUI():
     # 'quad_list' is a dictionary of format: quad_list = {'quad_1_name':{'position':quad_1_position,'orientation':quad_1_orientation,'arm_span':quad_1_arm_span}, ...}
-    def __init__(self, quads):
+    def __init__(self, quads, framerate):
         self.quads = quads
         self.fig = plt.figure()
+        self.time = datetime.datetime.now()
+        self.last_update = self.time
+        self.framerate = framerate
         self.ax = Axes3D.Axes3D(self.fig)
         self.ax.set_xlim3d([-2.0, 2.0])
         self.ax.set_xlabel('X')
@@ -19,6 +23,7 @@ class GUI():
         self.ax.set_title('Quadcopter Simulation')
         self.init_plot()
         self.fig.canvas.mpl_connect('key_press_event', self.keypress_routine)
+        self.run = True
 
     def rotation_matrix(self,angles):
         ct = math.cos(angles[0])
@@ -54,7 +59,13 @@ class GUI():
             self.quads[key]['l2'].set_3d_properties(points[2,2:4])
             self.quads[key]['hub'].set_data(points[0,5],points[1,5])
             self.quads[key]['hub'].set_3d_properties(points[2,5])
-        plt.pause(0.000000000000001)
+        
+    def check_update(self):
+        if (self.run == True):
+            self.time = datetime.datetime.now()
+            if (self.time - self.last_update).total_seconds() > 1/self.framerate:
+                self.update()
+                self.last_update = self.time
 
     def keypress_routine(self,event):
         sys.stdout.flush()

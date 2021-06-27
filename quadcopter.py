@@ -1,9 +1,8 @@
 import numpy as np
 import math
 import scipy.integrate
-import time
 import datetime
-import threading
+import time
 
 class Propeller():
     def __init__(self, prop_dia, prop_pitch, thrust_unit='N'):
@@ -24,13 +23,15 @@ class Propeller():
 class Quadcopter():
     # State space representation: [x y z x_dot y_dot z_dot theta phi gamma theta_dot phi_dot gamma_dot]
     # From Quadcopter Dynamics, Simulation, and Control by Andrew Gibiansky
-    def __init__(self,quads,gravity=9.81,b=0.0245):
+    def __init__(self,quads,dt,time_scaling,gravity=9.81,b=0.0245):
         self.quads = quads
         self.g = gravity
         self.b = b
-        self.thread_object = None
+        self.dt = dt
+        self.rate = time_scaling*dt
         self.ode =  scipy.integrate.ode(self.state_dot).set_integrator('vode',nsteps=500,method='bdf')
         self.time = datetime.datetime.now()
+        self.last_update = self.time
         for key in self.quads:
             self.quads[key]['state'] = np.zeros(12)
             self.quads[key]['state'][0:3] = self.quads[key]['position']
@@ -124,19 +125,10 @@ class Quadcopter():
     def get_time(self):
         return self.time
 
-    def thread_run(self,dt,time_scaling):
-        rate = time_scaling*dt
-        last_update = self.time
-        while(self.run==True):
+    def check_update(self):
+        if (self.run == True):
             time.sleep(0)
             self.time = datetime.datetime.now()
-            if (self.time-last_update).total_seconds() > rate:
-                self.update(dt)
-                last_update = self.time
-
-    def start_thread(self,dt=0.002,time_scaling=1):
-        self.thread_object = threading.Thread(target=self.thread_run,args=(dt,time_scaling))
-        self.thread_object.start()
-
-    def stop_thread(self):
-        self.run = False
+            if (self.time - self.last_update).total_seconds() > self.rate:
+                self.update(self.dt)
+                self.last_update = self.time
