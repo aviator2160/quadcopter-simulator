@@ -45,6 +45,7 @@ class Quadcopter():
             izz=((2*self.quads[key]['weight']*self.quads[key]['r']**2)/5)+(4*self.quads[key]['weight']*self.quads[key]['L']**2)
             self.quads[key]['I'] = np.array([[ixx,0,0],[0,iyy,0],[0,0,izz]])
             self.quads[key]['invI'] = np.linalg.inv(self.quads[key]['I'])
+        self.TIME_SCALING_EPSILON = 0.01
         self.run = True
 
     def rotation_matrix(self,angles):
@@ -124,7 +125,7 @@ class Quadcopter():
     def get_time(self, scaled=True):
         curr_time = (datetime.datetime.now() - self.start).total_seconds()
         if scaled == True:
-            return curr_time * self.time_scaling
+            return curr_time / self.time_scaling
         else:
             return curr_time
 
@@ -139,7 +140,10 @@ class Quadcopter():
 
     def start_thread(self,dt=0.002,time_scaling=1):
         self.dt = dt
-        self.time_scaling = time_scaling
+        if time_scaling > self.TIME_SCALING_EPSILON:
+            self.time_scaling = time_scaling
+        else:
+            self.time_scaling = self.TIME_SCALING_EPSILON
         self.thread_object = threading.Thread(target=self.thread_run)
         self.thread_object.start()
 

@@ -3,7 +3,7 @@ import signal
 import argparse
 
 # Constants
-TIME_SCALING = 1.0 # Any positive number(Smaller is faster). 1.0->Real Time, 0.0->Run as fast as possible
+TIME_SCALING = 0.3 # Any positive number(Smaller is faster). 1.0->Real Time, 0.0->Run as fast as possible
 QUAD_DYNAMICS_UPDATE = 0.002 # seconds
 CONTROLLER_DYNAMICS_UPDATE = 0.005 # seconds
 run = True
@@ -11,10 +11,11 @@ anim = None
 
 def Single_Point2Point():
     # Set goals to go to
-    GOALS = [{'time': 0,  'position': ( 1, 1,2), 'yaw': 0},
-             {'time': 5,  'position': ( 1,-1,4), 'yaw': 3.14},
-             {'time': 10, 'position': (-1,-1,2), 'yaw': -1.54},
-             {'time': 15, 'position': (-1, 1,4), 'yaw': 1.54}]
+    GOALS = [{'time': 8,  'position': ( 1, 1,2), 'yaw': 0},
+             {'time': 16,  'position': ( 1,-1,4), 'yaw': 3.14},
+             {'time': 24, 'position': (-1,-1,2), 'yaw': -1.54},
+             {'time': 32, 'position': (-1, 1,4), 'yaw': 1.54}]
+    SIM_DURATION = 32 # simulated seconds
     # Define the quadcopters
     QUADCOPTER={'q1':{'position':[1,0,4],'orientation':[0,0,0],'L':0.3,'r':0.1,'prop_size':[10,4.5],'weight':1.2}}
     # Controller parameters
@@ -32,14 +33,13 @@ def Single_Point2Point():
     signal.signal(signal.SIGINT, signal_handler)
     # Make objects for quadcopter, gui and controller
     quad = quadcopter.Quadcopter(QUADCOPTER)
-    gui_object = gui.GUI(quads=QUADCOPTER, get_data=(quad.get_position,quad.get_orientation))
+    gui_object = gui.GUI(quads=QUADCOPTER, get_data=(quad.get_position,quad.get_orientation), get_time=quad.get_time)
     ctrl = controller.Controller_PID_Point2Point(quad.get_state,quad.get_time,quad.set_motor_speeds,goals=GOALS,params=CONTROLLER_PARAMETERS,quad_identifier='q1')
     # Start the threads
     quad.start_thread(dt=QUAD_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
     ctrl.start_thread(dt=CONTROLLER_DYNAMICS_UPDATE)
     # Update the GUI while switching between destination poitions
-    global anim
-    anim = gui_object.animate()
+    gui_object.animate(duration=SIM_DURATION, frame_rate=30)
     quad.stop_thread()
     ctrl.stop_thread()
 

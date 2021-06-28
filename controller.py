@@ -11,6 +11,7 @@ class Controller_PID_Point2Point():
         self.get_time = get_time
         self.goals = goals
         self.curr_goal = {'time': 0, 'position': (0,0,0), 'yaw': 0}
+        self.update_goal(self.goals.pop(0))
         self.MOTOR_LIMITS = params['Motor_limits']
         self.TILT_LIMITS = [(params['Tilt_limits'][0]/180.0)*3.14,(params['Tilt_limits'][1]/180.0)*3.14]
         self.YAW_CONTROL_LIMITS = params['Yaw_Control_Limits']
@@ -36,7 +37,7 @@ class Controller_PID_Point2Point():
         return( ( val + np.pi) % (2 * np.pi ) - np.pi )
 
     def update(self):
-        if (self.get_time() >= self.curr_goal['time']) and (len(self.goals) > 0):
+        if (self.get_time() > self.curr_goal['time']) and (len(self.goals) > 0):
             self.update_goal(self.goals.pop(0))
             print(self.curr_goal['time'])
         [dest_x,dest_y,dest_z] = self.curr_goal['position']

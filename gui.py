@@ -7,9 +7,10 @@ import sys
 
 class GUI():
     # 'quad_list' is a dictionary of format: quad_list = {'quad_1_name':{'position':quad_1_position,'orientation':quad_1_orientation,'arm_span':quad_1_arm_span}, ...}
-    def __init__(self, quads, get_data):
+    def __init__(self, quads, get_data, get_time):
         self.quads = quads
         self.get_data = get_data
+        self.get_time = get_time
         self.fig = plt.figure()
         self.ax = Axes3D.Axes3D(self.fig, auto_add_to_figure=False)
         self.fig.add_axes(self.ax)
@@ -21,7 +22,8 @@ class GUI():
         self.ax.set_zlabel('Z')
         self.ax.set_title('Quadcopter Simulation')
         self.init_plot()
-        self.fig.canvas.mpl_connect('key_press_event', self.keypress_routine)
+        self.fig.canvas.mpl_connect('key_press_event', self.key_press_routine)
+        self.fig.canvas.mpl_connect('close_event', self.close_routine)
 
     def rotation_matrix(self,angles):
         ct = math.cos(angles[0])
@@ -70,13 +72,26 @@ class GUI():
             blit_artists.append(self.quads[key]['hub'])
         return tuple(blit_artists)
     
-    def animate(self):
-        anim = animation.FuncAnimation(self.fig, self.update, init_func=self.init_plot,
-                                        frames=300, interval=30, blit=True)
-        plt.show(block=True)
-        return anim
+    def frame_iter(self):
+        while self.get_time() < self.anim_duration:
+            yield
+        self.run = False
+    
+    def animate(self, duration, frame_rate=30):
+        self.run = True
+        self.pause = False
+        self.anim_duration = duration
+        frame_delta = 1000/frame_rate
+        self.anim = animation.FuncAnimation(self.fig, self.update, init_func=self.init_plot,
+                                       frames=self.frame_iter, interval=frame_delta,
+                                       blit=True)
+        while self.run == True:
+            try:
+                plt.pause(1/frame_rate)
+            except KeyboardInterrupt:
+                break
 
-    def keypress_routine(self,event):
+    def key_press_routine(self,event):
         sys.stdout.flush()
         if event.key == 'x':
             y = list(self.ax.get_ylim3d())
@@ -98,3 +113,6 @@ class GUI():
             x[0] -= 0.2
             x[1] -= 0.2
             self.ax.set_xlim3d(x)
+    
+    def close_routine(self,event):
+        self.run = False
