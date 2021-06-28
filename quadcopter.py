@@ -30,7 +30,7 @@ class Quadcopter():
         self.b = b
         self.thread_object = None
         self.ode =  scipy.integrate.ode(self.state_dot).set_integrator('vode',nsteps=500,method='bdf')
-        self.time = datetime.datetime.now()
+        self.start = datetime.datetime.now()
         for key in self.quads:
             self.quads[key]['state'] = np.zeros(12)
             self.quads[key]['state'][0:3] = self.quads[key]['position']
@@ -87,10 +87,10 @@ class Quadcopter():
         state_dot[11] = omega_dot[2]
         return state_dot
 
-    def update(self, dt):
+    def update(self):
         for key in self.quads:
             self.ode.set_initial_value(self.quads[key]['state'],0).set_f_params(key)
-            self.quads[key]['state'] = self.ode.integrate(self.ode.t + dt)
+            self.quads[key]['state'] = self.ode.integrate(self.ode.t + self.dt)
             self.quads[key]['state'][6:9] = self.wrap_angle(self.quads[key]['state'][6:9])
             self.quads[key]['state'][2] = max(0,self.quads[key]['state'][2])
 
@@ -121,21 +121,26 @@ class Quadcopter():
     def set_orientation(self,quad_name,orientation):
         self.quads[quad_name]['state'][6:9] = orientation
 
-    def get_time(self):
-        return self.time
+    def get_time(self, scaled=True):
+        curr_time = (datetime.datetime.now() - self.start).total_seconds()
+        if scaled == True:
+            return curr_time * self.time_scaling
+        else:
+            return curr_time
 
-    def thread_run(self,dt,time_scaling):
-        rate = time_scaling*dt
-        last_update = self.time
+    def thread_run(self):
+        last_update = 0
         while(self.run==True):
             time.sleep(0)
-            self.time = datetime.datetime.now()
-            if (self.time-last_update).total_seconds() > rate:
-                self.update(dt)
-                last_update = self.time
+            curr_time = self.get_time()
+            if (curr_time - last_update) > self.dt:
+                self.update()
+                last_update = curr_time
 
     def start_thread(self,dt=0.002,time_scaling=1):
-        self.thread_object = threading.Thread(target=self.thread_run,args=(dt,time_scaling))
+        self.dt = dt
+        self.time_scaling = time_scaling
+        self.thread_object = threading.Thread(target=self.thread_run)
         self.thread_object.start()
 
     def stop_thread(self):

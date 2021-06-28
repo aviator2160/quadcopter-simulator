@@ -20,9 +20,9 @@ ax.set_ylabel('Y')
 ax.set_zlim3d([0, 5.0])
 ax.set_zlabel('Z')
 ax.set_title('Quadcopter Simulation')
-l1, = ax.plot([], [], [])
-l2, = ax.plot([], [], [])
-hub, = ax.plot([], [], [])
+l1 = None
+l2 = None
+hub = None
 
 def rotation_matrix(angles):
     ct = math.cos(angles[0])
@@ -38,12 +38,14 @@ def rotation_matrix(angles):
     return R
 
 def init_plot():
+    global l1, l2, hub
     l1,  = ax.plot([],[],[],color='blue',linewidth=3,antialiased=False)
     l2,  = ax.plot([],[],[],color='red',linewidth=3,antialiased=False)
     hub, = ax.plot([],[],[],marker='o',color='green', markersize=6,antialiased=False)
     return (l1, l2, hub)
 
 def update(i):
+    global l1, l2, hub
     position = [math.cos(0.1 * i), math.sin(0.1 * i), 0]
     R = rotation_matrix([0, 0, 0.05 * i])
     L = 0.3

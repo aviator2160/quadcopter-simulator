@@ -7,11 +7,14 @@ TIME_SCALING = 1.0 # Any positive number(Smaller is faster). 1.0->Real Time, 0.0
 QUAD_DYNAMICS_UPDATE = 0.002 # seconds
 CONTROLLER_DYNAMICS_UPDATE = 0.005 # seconds
 run = True
+anim = None
 
 def Single_Point2Point():
     # Set goals to go to
-    GOALS = [(1,1,2),(1,-1,4),(-1,-1,2),(-1,1,4)]
-    YAWS = [0,3.14,-1.54,1.54]
+    GOALS = [{'time': 0,  'position': ( 1, 1,2), 'yaw': 0},
+             {'time': 5,  'position': ( 1,-1,4), 'yaw': 3.14},
+             {'time': 10, 'position': (-1,-1,2), 'yaw': -1.54},
+             {'time': 15, 'position': (-1, 1,4), 'yaw': 1.54}]
     # Define the quadcopters
     QUADCOPTER={'q1':{'position':[1,0,4],'orientation':[0,0,0],'L':0.3,'r':0.1,'prop_size':[10,4.5],'weight':1.2}}
     # Controller parameters
@@ -29,21 +32,14 @@ def Single_Point2Point():
     signal.signal(signal.SIGINT, signal_handler)
     # Make objects for quadcopter, gui and controller
     quad = quadcopter.Quadcopter(QUADCOPTER)
-    gui_object = gui.GUI(quads=QUADCOPTER)
-    ctrl = controller.Controller_PID_Point2Point(quad.get_state,quad.get_time,quad.set_motor_speeds,params=CONTROLLER_PARAMETERS,quad_identifier='q1')
+    gui_object = gui.GUI(quads=QUADCOPTER, get_data=(quad.get_position,quad.get_orientation))
+    ctrl = controller.Controller_PID_Point2Point(quad.get_state,quad.get_time,quad.set_motor_speeds,goals=GOALS,params=CONTROLLER_PARAMETERS,quad_identifier='q1')
     # Start the threads
     quad.start_thread(dt=QUAD_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
-    ctrl.start_thread(update_rate=CONTROLLER_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
+    ctrl.start_thread(dt=CONTROLLER_DYNAMICS_UPDATE)
     # Update the GUI while switching between destination poitions
-    for goal,y in zip(GOALS,YAWS):
-        if (run == False): break
-        ctrl.update_target(goal)
-        ctrl.update_yaw_target(y)
-        for i in range(300):
-            if (run == False): break
-            gui_object.quads['q1']['position'] = quad.get_position('q1')
-            gui_object.quads['q1']['orientation'] = quad.get_orientation('q1')
-            gui_object.update()
+    global anim
+    anim = gui_object.animate()
     quad.stop_thread()
     ctrl.stop_thread()
 

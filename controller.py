@@ -4,11 +4,13 @@ import time
 import threading
 
 class Controller_PID_Point2Point():
-    def __init__(self, get_state, get_time, actuate_motors, params, quad_identifier):
+    def __init__(self, get_state, get_time, actuate_motors, goals, params, quad_identifier):
         self.quad_identifier = quad_identifier
         self.actuate_motors = actuate_motors
         self.get_state = get_state
         self.get_time = get_time
+        self.goals = goals
+        self.curr_goal = {'time': 0, 'position': (0,0,0), 'yaw': 0}
         self.MOTOR_LIMITS = params['Motor_limits']
         self.TILT_LIMITS = [(params['Tilt_limits'][0]/180.0)*3.14,(params['Tilt_limits'][1]/180.0)*3.14]
         self.YAW_CONTROL_LIMITS = params['Yaw_Control_Limits']
@@ -28,15 +30,16 @@ class Controller_PID_Point2Point():
         self.phii_term = 0
         self.gammai_term = 0
         self.thread_object = None
-        self.target = [0,0,0]
-        self.yaw_target = 0.0
         self.run = True
 
     def wrap_angle(self,val):
         return( ( val + np.pi) % (2 * np.pi ) - np.pi )
 
     def update(self):
-        [dest_x,dest_y,dest_z] = self.target
+        if (self.get_time() >= self.curr_goal['time']) and (len(self.goals) > 0):
+            self.update_goal(self.goals.pop(0))
+            print(self.curr_goal['time'])
+        [dest_x,dest_y,dest_z] = self.curr_goal['position']
         [x,y,z,x_dot,y_dot,z_dot,theta,phi,gamma,theta_dot,phi_dot,gamma_dot] = self.get_state(self.quad_identifier)
         x_error = dest_x-x
         y_error = dest_y-y
@@ -50,7 +53,7 @@ class Controller_PID_Point2Point():
         throttle = np.clip(dest_z_dot,self.Z_LIMITS[0],self.Z_LIMITS[1])
         dest_theta = self.LINEAR_TO_ANGULAR_SCALER[0]*(dest_x_dot*math.sin(gamma)-dest_y_dot*math.cos(gamma))
         dest_phi = self.LINEAR_TO_ANGULAR_SCALER[1]*(dest_x_dot*math.cos(gamma)+dest_y_dot*math.sin(gamma))
-        dest_gamma = self.yaw_target
+        dest_gamma = self.curr_goal['yaw']
         dest_theta,dest_phi = np.clip(dest_theta,self.TILT_LIMITS[0],self.TILT_LIMITS[1]),np.clip(dest_phi,self.TILT_LIMITS[0],self.TILT_LIMITS[1])
         theta_error = dest_theta-theta
         phi_error = dest_phi-phi
@@ -69,24 +72,26 @@ class Controller_PID_Point2Point():
         M = np.clip([m1,m2,m3,m4],self.MOTOR_LIMITS[0],self.MOTOR_LIMITS[1])
         self.actuate_motors(self.quad_identifier,M)
 
-    def update_target(self,target):
-        self.target = target
+    def update_goal(self,new_goal):
+        # new_goal might not contain all possible goals
+        for key in new_goal:
+            self.curr_goal[key] = new_goal[key]
 
     def update_yaw_target(self,target):
         self.yaw_target = self.wrap_angle(target)
-
-    def thread_run(self,update_rate,time_scaling):
-        update_rate = update_rate*time_scaling
-        last_update = self.get_time()
+    
+    def thread_run(self):
+        last_update = 0
         while(self.run==True):
             time.sleep(0)
-            self.time = self.get_time()
-            if (self.time - last_update).total_seconds() > update_rate:
+            curr_time = self.get_time()
+            if (curr_time - last_update) > self.dt:
                 self.update()
-                last_update = self.time
+                last_update = curr_time
 
-    def start_thread(self,update_rate=0.005,time_scaling=1):
-        self.thread_object = threading.Thread(target=self.thread_run,args=(update_rate,time_scaling))
+    def start_thread(self,dt=0.005):
+        self.dt = dt
+        self.thread_object = threading.Thread(target=self.thread_run)
         self.thread_object.start()
 
     def stop_thread(self):
