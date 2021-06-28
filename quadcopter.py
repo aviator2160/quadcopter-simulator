@@ -1,8 +1,7 @@
+import datetime
 import numpy as np
 import math
 import scipy.integrate
-import datetime
-import time
 
 class Propeller():
     def __init__(self, prop_dia, prop_pitch, thrust_unit='N'):
@@ -127,7 +126,6 @@ class Quadcopter():
 
     def check_update(self):
         if (self.run == True):
-            time.sleep(0)
             self.time = datetime.datetime.now()
             if (self.time - self.last_update).total_seconds() > self.rate:
                 self.update(self.dt)

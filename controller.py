@@ -1,6 +1,5 @@
 import numpy as np
 import math
-import time
 
 class Controller_PID_Point2Point():
     def __init__(self, get_state, get_time, actuate_motors, dt, time_scaling, params, quad_identifier):
@@ -80,7 +79,6 @@ class Controller_PID_Point2Point():
     
     def check_update(self):
         if (self.run == True):
-            time.sleep(0)
             self.time = self.get_time()
             if (self.time - self.last_update).total_seconds() > self.rate:
                 self.update()

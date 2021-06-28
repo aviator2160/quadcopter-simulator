@@ -1,3 +1,4 @@
+import datetime
 import numpy as np
 import math
 import matplotlib.pyplot as plt
@@ -7,11 +8,9 @@ import sys
 
 class GUI():
     # 'quad_list' is a dictionary of format: quad_list = {'quad_1_name':{'position':quad_1_position,'orientation':quad_1_orientation,'arm_span':quad_1_arm_span}, ...}
-    def __init__(self, quads, frame_data_gen, framerate):
+    def __init__(self, quads):
         self.quads = quads
-        
         self.fig = plt.figure()
-        self.framerate = framerate
         self.ax = Axes3D.Axes3D(self.fig, auto_add_to_figure=False)
         self.fig.add_axes(self.ax)
         self.ax.set_xlim3d([-2.0, 2.0])
@@ -21,7 +20,6 @@ class GUI():
         self.ax.set_zlim3d([0, 5.0])
         self.ax.set_zlabel('Z')
         self.ax.set_title('Quadcopter Simulation')
-        self.frame_data = frame_data_gen
         self.init_plot()
         self.fig.canvas.mpl_connect('key_press_event', self.keypress_routine)
 
@@ -50,17 +48,16 @@ class GUI():
         return tuple(blit_artists)
 
     def update(self, frame):
+        print(frame)
         blit_artists = []
         for key in self.quads:
-            position = self.frame_data_source[0](key)
-            orientation = self.frame_data_source[1](key)
-            R = self.rotation_matrix(orientation)
+            R = self.rotation_matrix(self.quads[key]['orientation'])
             L = self.quads[key]['L']
             points = np.array([ [-L,0,0], [L,0,0], [0,-L,0], [0,L,0], [0,0,0], [0,0,0] ]).T
             points = np.dot(R,points)
-            points[0,:] += position[0]
-            points[1,:] += position[1]
-            points[2,:] += position[2]
+            points[0,:] += self.quads[key]['position'][0]
+            points[1,:] += self.quads[key]['position'][1]
+            points[2,:] += self.quads[key]['position'][2]
             self.quads[key]['l1'].set_data(points[0,0:2],points[1,0:2])
             self.quads[key]['l1'].set_3d_properties(points[2,0:2])
             self.quads[key]['l2'].set_data(points[0,2:4],points[1,2:4])
@@ -73,9 +70,34 @@ class GUI():
         plt.pause(0.000000000000001)
         return tuple(blit_artists)
     
-    def animate(self):
-        self.anim = animation.FuncAnimation(self.fig, self.update, init_func=self.init_plot,
-                                            frames=self.frame_data_gen, interval=self.framerate, blit=True)
+    def test_update(self, i):
+        print(i)
+        self.quads['q1']['l1'].set_data([0,0,0],[i/30,i/30,i/30])
+        return self.quads['q1']['l1'],
+    
+    def frame_data_gen(self):
+        for i in range(self.num_frames):
+            for key in self.quads:
+                self.quads[key]['position'] = self.get_data[0](key)
+                self.quads[key]['orientation'] = self.get_data[1](key)
+            while (self.time - self.last_frame).total_seconds() < self.frame_delta:
+                for update in self.dynamics_updates:
+                    update()
+            yield i
+    
+    def animate(self, get_data, dynamics_updates, framerate=30, num_frames=300):
+        self.get_data = get_data
+        self.dynamics_updates = dynamics_updates
+        self.frame_delta = 1/framerate
+        self.num_frames = num_frames
+        self.time = datetime.datetime.now()
+        self.last_frame = self.time
+        #anim = animation.FuncAnimation(self.fig, self.update, init_func=self.init_plot,
+        #                                    frames=self.frame_data_gen, interval=self.frame_delta * 1000, blit=True)
+        anim = animation.FuncAnimation(self.fig, self.test_update, init_func=self.init_plot,
+                                       frames=60, interval=30, blit=True, repeat=False)
+        plt.show(block=True)
+        return anim
 
     def keypress_routine(self,event):
         sys.stdout.flush()
