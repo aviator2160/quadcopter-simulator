@@ -72,17 +72,16 @@ class GUI():
     
     def test_update(self, i):
         print(i)
-        self.quads['q1']['l1'].set_data([0,0,0],[i/30,i/30,i/30])
+        self.quads['q1']['position'][0] = i/30
         return self.quads['q1']['l1'],
     
     def frame_data_gen(self):
         for i in range(self.num_frames):
+            for update in self.dynamics_updates:
+                update()
             for key in self.quads:
                 self.quads[key]['position'] = self.get_data[0](key)
                 self.quads[key]['orientation'] = self.get_data[1](key)
-            while (self.time - self.last_frame).total_seconds() < self.frame_delta:
-                for update in self.dynamics_updates:
-                    update()
             yield i
     
     def animate(self, get_data, dynamics_updates, framerate=30, num_frames=300):
@@ -94,9 +93,10 @@ class GUI():
         self.last_frame = self.time
         #anim = animation.FuncAnimation(self.fig, self.update, init_func=self.init_plot,
         #                                    frames=self.frame_data_gen, interval=self.frame_delta * 1000, blit=True)
-        anim = animation.FuncAnimation(self.fig, self.test_update, init_func=self.init_plot,
-                                       frames=60, interval=30, blit=True, repeat=False)
-        plt.show(block=True)
+        anim = animation.FuncAnimation(self.fig, self.update, init_func=self.init_plot,
+                                       frames=self.frame_data_gen, interval=30,
+                                       blit=True, repeat=False)
+        plt.show()
         return anim
 
     def keypress_routine(self,event):
