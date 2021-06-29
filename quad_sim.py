@@ -11,10 +11,10 @@ anim = None
 
 def Single_Point2Point():
     # Set goals to go to
-    GOALS = [{'time': 8,  'position': ( 1, 1,2), 'yaw': 0},
-             {'time': 16,  'position': ( 1,-1,4), 'yaw': 3.14},
-             {'time': 24, 'position': (-1,-1,2), 'yaw': -1.54},
-             {'time': 32, 'position': (-1, 1,4), 'yaw': 1.54}]
+    GOALS = [{'time': 0,  'position': ( 1, 1,2), 'yaw': 0},
+             {'time': 8,  'position': ( 1,-1,4), 'yaw': 3.14},
+             {'time': 16, 'position': (-1,-1,2), 'yaw': -1.54},
+             {'time': 24, 'position': (-1, 1,4), 'yaw': 1.54}]
     SIM_DURATION = 32 # simulated seconds
     # Define the quadcopters
     QUADCOPTER={'q1':{'position':[1,0,4],'orientation':[0,0,0],'L':0.3,'r':0.1,'prop_size':[10,4.5],'weight':1.2}}
@@ -33,20 +33,24 @@ def Single_Point2Point():
     signal.signal(signal.SIGINT, signal_handler)
     # Make objects for quadcopter, gui and controller
     quad = quadcopter.Quadcopter(QUADCOPTER)
-    gui_object = gui.GUI(quads=QUADCOPTER, get_data=(quad.get_position,quad.get_orientation), get_time=quad.get_time)
     ctrl = controller.Controller_PID_Point2Point(quad.get_state,quad.get_time,quad.set_motor_speeds,goals=GOALS,params=CONTROLLER_PARAMETERS,quad_identifier='q1')
+    gui_object = gui.GUI(quads=QUADCOPTER, get_data=(quad.get_position,quad.get_orientation), get_time=quad.get_time)
     # Start the threads
     quad.start_thread(dt=QUAD_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
     ctrl.start_thread(dt=CONTROLLER_DYNAMICS_UPDATE)
     # Update the GUI while switching between destination poitions
     gui_object.animate(duration=SIM_DURATION, pause_sim=quad.pause_thread, frame_rate=30)
+    # Stop threads once animations are done
     quad.stop_thread()
     ctrl.stop_thread()
 
 def Multi_Point2Point():
     # Set goals to go to
-    GOALS_1 = [(-1,-1,4),(1,1,2)]
-    GOALS_2 = [(1,-1,2),(-1,1,4)]
+    GOALS_1 = [{'time': 0,  'position': (-1,-1,4)},
+               {'time': 8,  'position': ( 1, 1,2)}]
+    GOALS_2 = [{'time': 0,  'position': ( 1,-1,2)},
+               {'time': 10, 'position': (-1, 1,4)}]
+    SIM_DURATION = 16 # simulated seconds
     # Define the quadcopters
     QUADCOPTERS={'q1':{'position':[1,0,4],'orientation':[0,0,0],'L':0.3,'r':0.1,'prop_size':[10,4.5],'weight':1.2},
         'q2':{'position':[-1,0,4],'orientation':[0,0,0],'L':0.15,'r':0.05,'prop_size':[6,4.5],'weight':0.7}}
@@ -73,32 +77,28 @@ def Multi_Point2Point():
     # Catch Ctrl+C to stop threads
     signal.signal(signal.SIGINT, signal_handler)
     # Make objects for quadcopter, gui and controllers
-    gui_object = gui.GUI(quads=QUADCOPTERS)
     quad = quadcopter.Quadcopter(quads=QUADCOPTERS)
-    ctrl1 = controller.Controller_PID_Point2Point(quad.get_state,quad.get_time,quad.set_motor_speeds,params=CONTROLLER_1_PARAMETERS,quad_identifier='q1')
-    ctrl2 = controller.Controller_PID_Point2Point(quad.get_state,quad.get_time,quad.set_motor_speeds,params=CONTROLLER_2_PARAMETERS,quad_identifier='q2')
+    ctrl1 = controller.Controller_PID_Point2Point(quad.get_state,quad.get_time,quad.set_motor_speeds,goals=GOALS_1,params=CONTROLLER_1_PARAMETERS,quad_identifier='q1')
+    ctrl2 = controller.Controller_PID_Point2Point(quad.get_state,quad.get_time,quad.set_motor_speeds,goals=GOALS_2,params=CONTROLLER_2_PARAMETERS,quad_identifier='q2')
+    gui_object = gui.GUI(quads=QUADCOPTERS,get_data=(quad.get_position,quad.get_orientation),get_time=quad.get_time)
     # Start the threads
     quad.start_thread(dt=QUAD_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
-    ctrl1.start_thread(update_rate=CONTROLLER_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
-    ctrl2.start_thread(update_rate=CONTROLLER_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
+    ctrl1.start_thread(dt=CONTROLLER_DYNAMICS_UPDATE)
+    ctrl2.start_thread(dt=CONTROLLER_DYNAMICS_UPDATE)
     # Update the GUI while switching between destination poitions
-    for goal1,goal2 in zip(GOALS_1,GOALS_2):
-        if (run == False): break;
-        ctrl1.update_target(goal1)
-        ctrl2.update_target(goal2)
-        for i in range(150):
-            if (run == False): break;
-            for key in QUADCOPTERS:
-                gui_object.quads[key]['position'] = quad.get_position(key)
-                gui_object.quads[key]['orientation'] = quad.get_orientation(key)
-            gui_object.update()
+    gui_object.animate(duration=SIM_DURATION, pause_sim=quad.pause_thread, frame_rate=30)
+    # Stop threads once animations are done
     quad.stop_thread()
     ctrl1.stop_thread()
     ctrl2.stop_thread()
 
 def Single_Velocity():
     # Set goals to go to
-    GOALS = [(0.5,0,2),(0,0.5,2),(-0.5,0,2),(0,-0.5,2)]
+    GOALS = [{'time': 0,  'position': ( 0.5,   0,2)},
+             {'time': 5,  'position': (   0, 0.5,2)},
+             {'time': 10, 'position': (-0.5,   0,2)},
+             {'time': 15, 'position': (   0,-0.5,2)}]
+    SIM_DURATION = 20 # simulated seconds
     # Define the quadcopters
     QUADCOPTER={'q1':{'position':[0,0,0],'orientation':[0,0,0],'L':0.3,'r':0.1,'prop_size':[10,4.5],'weight':1.2}}
     # Controller parameters
@@ -116,26 +116,20 @@ def Single_Velocity():
     signal.signal(signal.SIGINT, signal_handler)
     # Make objects for quadcopter, gui and controller
     quad = quadcopter.Quadcopter(QUADCOPTER)
-    gui_object = gui.GUI(quads=QUADCOPTER)
-    ctrl = controller.Controller_PID_Velocity(quad.get_state,quad.get_time,quad.set_motor_speeds,params=CONTROLLER_PARAMETERS,quad_identifier='q1')
+    ctrl = controller.Controller_PID_Velocity(quad.get_state,quad.get_time,quad.set_motor_speeds,goals=GOALS,params=CONTROLLER_PARAMETERS,quad_identifier='q1')
+    gui_object = gui.GUI(quads=QUADCOPTER, get_data=(quad.get_position,quad.get_orientation), get_time=quad.get_time)
     # Start the threads
     quad.start_thread(dt=QUAD_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
-    ctrl.start_thread(update_rate=CONTROLLER_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
+    ctrl.start_thread(dt=CONTROLLER_DYNAMICS_UPDATE)
     # Update the GUI while switching between destination poitions
-    for goal in GOALS:
-        if (run == False): break;
-        ctrl.update_target(goal)
-        for i in range(150):
-            if (run == False): break;
-            gui_object.quads['q1']['position'] = quad.get_position('q1')
-            gui_object.quads['q1']['orientation'] = quad.get_orientation('q1')
-            gui_object.update()
+    gui_object.animate(duration=SIM_DURATION, pause_sim=quad.pause_thread, frame_rate=30)
+    # Stop threads once animations are done
     quad.stop_thread()
     ctrl.stop_thread()
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Quadcopter Simulator")
-    parser.add_argument("--sim", help='single_p2p, multi_p2p or single_velocity', default='single_p2p')
+    parser.add_argument("--sim", help='single_p2p, multi_p2p or single_velocity', default='single_velocity')
     parser.add_argument("--time_scale", type=float, default=-1.0, help='Time scaling factor. 0.0:fastest,1.0:realtime,>1:slow, ex: --time_scale 0.1')
     parser.add_argument("--quad_update_time", type=float, default=0.0, help='delta time for quadcopter dynamics update(seconds), ex: --quad_update_time 0.002')
     parser.add_argument("--controller_update_time", type=float, default=0.0, help='delta time for controller update(seconds), ex: --controller_update_time 0.005')

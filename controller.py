@@ -36,7 +36,7 @@ class Controller_PID_Point2Point():
         return( ( val + np.pi) % (2 * np.pi ) - np.pi )
 
     def update(self):
-        if (self.get_time() > self.curr_goal['time']) and (len(self.goals) > 0):
+        if (len(self.goals) > 0) and (self.get_time() > self.goals[0]['time']):
             self.update_goal(self.goals.pop(0))
         [dest_x,dest_y,dest_z] = self.curr_goal['position']
         [x,y,z,x_dot,y_dot,z_dot,theta,phi,gamma,theta_dot,phi_dot,gamma_dot] = self.get_state(self.quad_identifier)
@@ -99,7 +99,9 @@ class Controller_PID_Point2Point():
 
 class Controller_PID_Velocity(Controller_PID_Point2Point):
     def update(self):
-        [dest_x,dest_y,dest_z] = self.target
+        if (len(self.goals) > 0) and (self.get_time() > self.goals[0]['time']):
+            self.update_goal(self.goals.pop(0))
+        [dest_x,dest_y,dest_z] = self.curr_goal['position']
         [x,y,z,x_dot,y_dot,z_dot,theta,phi,gamma,theta_dot,phi_dot,gamma_dot] = self.get_state(self.quad_identifier)
         x_error = dest_x-x_dot
         y_error = dest_y-y_dot
@@ -113,7 +115,7 @@ class Controller_PID_Velocity(Controller_PID_Point2Point):
         throttle = np.clip(dest_z_dot,self.Z_LIMITS[0],self.Z_LIMITS[1])
         dest_theta = self.LINEAR_TO_ANGULAR_SCALER[0]*(dest_x_dot*math.sin(gamma)-dest_y_dot*math.cos(gamma))
         dest_phi = self.LINEAR_TO_ANGULAR_SCALER[1]*(dest_x_dot*math.cos(gamma)+dest_y_dot*math.sin(gamma))
-        dest_gamma = self.yaw_target
+        dest_gamma = self.curr_goal['yaw']
         dest_theta,dest_phi = np.clip(dest_theta,self.TILT_LIMITS[0],self.TILT_LIMITS[1]),np.clip(dest_phi,self.TILT_LIMITS[0],self.TILT_LIMITS[1])
         theta_error = dest_theta-theta
         phi_error = dest_phi-phi
