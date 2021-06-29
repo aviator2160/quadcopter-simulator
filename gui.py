@@ -49,7 +49,7 @@ class GUI():
             blit_artists.append(self.quads[key]['hub'])
         return tuple(blit_artists)
     
-    def update(self, i):
+    def update(self, i=0):
         blit_artists = []
         for key in self.quads:
             self.quads[key]['position'] = self.get_data[0](key)
@@ -77,22 +77,35 @@ class GUI():
             yield
         self.run = False
     
-    def animate(self, duration, frame_rate=30):
+    def animate(self, duration, pause_sim, frame_rate=30):
         self.run = True
         self.pause = False
+        self.pause_sim = pause_sim
         self.anim_duration = duration
-        frame_delta = 1000/frame_rate
+        frame_delta = 1/frame_rate
         self.anim = animation.FuncAnimation(self.fig, self.update, init_func=self.init_plot,
-                                       frames=self.frame_iter, interval=frame_delta,
+                                       frames=self.frame_iter, interval=1000*frame_delta,
                                        blit=True)
         while self.run == True:
-            try:
-                plt.pause(1/frame_rate)
-            except KeyboardInterrupt:
-                break
+            plt.pause(frame_delta)
+        self.init_plot()
+        self.update()
+    
+    def toggle_pause(self):
+        
+        self.pause = not self.pause
+        self.pause_sim(self.pause)
+        if self.pause == True:
+            self.anim.pause()
+            self.init_plot()
+        else:
+            self.anim.resume()
+            self.init_plot()
 
     def key_press_routine(self,event):
         sys.stdout.flush()
+        if event.key == 'p':
+            self.toggle_pause()
         if event.key == 'x':
             y = list(self.ax.get_ylim3d())
             y[0] += 0.2

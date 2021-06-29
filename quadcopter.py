@@ -123,7 +123,10 @@ class Quadcopter():
         self.quads[quad_name]['state'][6:9] = orientation
 
     def get_time(self, scaled=True):
-        curr_time = (datetime.datetime.now() - self.start).total_seconds()
+        if self.pause == False:
+            curr_time = (datetime.datetime.now() - self.start).total_seconds() - self.time_paused
+        else:
+            curr_time = (self.pause_start - self.start).total_seconds() - self.time_paused
         if scaled == True:
             return curr_time / self.time_scaling
         else:
@@ -144,8 +147,18 @@ class Quadcopter():
             self.time_scaling = time_scaling
         else:
             self.time_scaling = self.TIME_SCALING_EPSILON
+        self.pause = False
+        self.pause_start = self.start
+        self.time_paused = 0
         self.thread_object = threading.Thread(target=self.thread_run)
         self.thread_object.start()
 
     def stop_thread(self):
         self.run = False
+    
+    def pause_thread(self, pause):
+        self.pause = pause
+        if pause == True:
+            self.pause_start = datetime.datetime.now()
+        else:
+            self.time_paused += (datetime.datetime.now() - self.pause_start).total_seconds()

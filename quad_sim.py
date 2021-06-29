@@ -3,7 +3,7 @@ import signal
 import argparse
 
 # Constants
-TIME_SCALING = 0.3 # Any positive number(Smaller is faster). 1.0->Real Time, 0.0->Run as fast as possible
+TIME_SCALING = 1.0 # Any positive number(Smaller is faster). 1.0->Real Time, 0.0->Run as fast as possible
 QUAD_DYNAMICS_UPDATE = 0.002 # seconds
 CONTROLLER_DYNAMICS_UPDATE = 0.005 # seconds
 run = True
@@ -28,7 +28,7 @@ def Single_Point2Point():
                         'Yaw_Rate_Scaler':0.18,
                         'Angular_PID':{'P':[22000,22000,1500],'I':[0,0,1.2],'D':[12000,12000,0]},
                         }
-
+    
     # Catch Ctrl+C to stop threads
     signal.signal(signal.SIGINT, signal_handler)
     # Make objects for quadcopter, gui and controller
@@ -39,7 +39,7 @@ def Single_Point2Point():
     quad.start_thread(dt=QUAD_DYNAMICS_UPDATE,time_scaling=TIME_SCALING)
     ctrl.start_thread(dt=CONTROLLER_DYNAMICS_UPDATE)
     # Update the GUI while switching between destination poitions
-    gui_object.animate(duration=SIM_DURATION, frame_rate=30)
+    gui_object.animate(duration=SIM_DURATION, pause_sim=quad.pause_thread, frame_rate=30)
     quad.stop_thread()
     ctrl.stop_thread()
 
