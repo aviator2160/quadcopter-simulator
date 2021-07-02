@@ -2,7 +2,6 @@ import numpy as np
 import math
 import scipy.integrate
 import time
-import datetime
 import threading
 
 class Propeller():
@@ -21,16 +20,16 @@ class Propeller():
         if self.thrust_unit == 'Kg':
             self.thrust = self.thrust*0.101972
 
-class Quadcopter():
+class Quadcopters():
     # State space representation: [x y z x_dot y_dot z_dot theta phi gamma theta_dot phi_dot gamma_dot]
     # From Quadcopter Dynamics, Simulation, and Control by Andrew Gibiansky
-    def __init__(self,quads,gravity=9.81,b=0.0245):
+    def __init__(self,quads,get_time,gravity=9.81,b=0.0245):
         self.quads = quads
+        self.get_time= get_time
         self.g = gravity
         self.b = b
         self.thread_object = None
         self.ode =  scipy.integrate.ode(self.state_dot).set_integrator('vode',nsteps=500,method='bdf')
-        self.start = datetime.datetime.now()
         for key in self.quads:
             self.quads[key]['state'] = np.zeros(12)
             self.quads[key]['state'][0:3] = self.quads[key]['position']
@@ -45,7 +44,6 @@ class Quadcopter():
             izz=((2*self.quads[key]['weight']*self.quads[key]['r']**2)/5)+(4*self.quads[key]['weight']*self.quads[key]['L']**2)
             self.quads[key]['I'] = np.array([[ixx,0,0],[0,iyy,0],[0,0,izz]])
             self.quads[key]['invI'] = np.linalg.inv(self.quads[key]['I'])
-        self.TIME_SCALING_EPSILON = 0.01
         self.run = True
 
     def rotation_matrix(self,angles):
@@ -122,16 +120,6 @@ class Quadcopter():
     def set_orientation(self,quad_name,orientation):
         self.quads[quad_name]['state'][6:9] = orientation
 
-    def get_time(self, scaled=True):
-        if self.pause == False:
-            curr_time = (datetime.datetime.now() - self.start).total_seconds() - self.time_paused
-        else:
-            curr_time = (self.pause_start - self.start).total_seconds() - self.time_paused
-        if scaled == True:
-            return curr_time / self.time_scaling
-        else:
-            return curr_time
-
     def thread_run(self):
         last_update = 0
         while(self.run==True):
@@ -141,24 +129,10 @@ class Quadcopter():
                 self.update()
                 last_update = curr_time
 
-    def start_thread(self,dt=0.002,time_scaling=1):
+    def start_thread(self,dt=0.002):
         self.dt = dt
-        if time_scaling > self.TIME_SCALING_EPSILON:
-            self.time_scaling = time_scaling
-        else:
-            self.time_scaling = self.TIME_SCALING_EPSILON
-        self.pause = False
-        self.pause_start = self.start
-        self.time_paused = 0
         self.thread_object = threading.Thread(target=self.thread_run)
         self.thread_object.start()
 
     def stop_thread(self):
         self.run = False
-    
-    def pause_thread(self, pause):
-        self.pause = pause
-        if pause == True:
-            self.pause_start = datetime.datetime.now()
-        else:
-            self.time_paused += (datetime.datetime.now() - self.pause_start).total_seconds()

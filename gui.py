@@ -7,8 +7,8 @@ import sys
 
 class GUI():
     # 'quad_list' is a dictionary of format: quad_list = {'quad_1_name':{'position':quad_1_position,'orientation':quad_1_orientation,'arm_span':quad_1_arm_span}, ...}
-    def __init__(self, quads, get_data, get_time):
-        self.quads = quads
+    def __init__(self, QUAD_DEFS, get_data, get_time):
+        self.quads = QUAD_DEFS
         self.get_data = get_data
         self.get_time = get_time
         self.fig = plt.figure()
@@ -51,9 +51,10 @@ class GUI():
     
     def update(self, i=0):
         blit_artists = []
+        data = self.get_data()
         for key in self.quads:
-            self.quads[key]['position'] = self.get_data[0](key)
-            self.quads[key]['orientation'] = self.get_data[1](key)
+            self.quads[key]['position'] = data[key]['position']
+            self.quads[key]['orientation'] = data[key]['orientation']
             R = self.rotation_matrix(self.quads[key]['orientation'])
             L = self.quads[key]['L']
             points = np.array([ [-L,0,0], [L,0,0], [0,-L,0], [0,L,0], [0,0,0], [0,0,0] ]).T
@@ -73,7 +74,7 @@ class GUI():
         return tuple(blit_artists)
     
     def frame_iter(self):
-        while self.get_time() < self.anim_duration:
+        while self.get_time() < self.sim_duration:
             yield
         self.run = False
     
@@ -81,7 +82,7 @@ class GUI():
         self.run = True
         self.pause = False
         self.pause_sim = pause_sim
-        self.anim_duration = duration
+        self.sim_duration = duration
         frame_delta = 1/frame_rate
         self.anim = animation.FuncAnimation(self.fig, self.update, init_func=self.init_plot,
                                        frames=self.frame_iter, interval=1000*frame_delta,

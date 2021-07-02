@@ -3,13 +3,21 @@ import math
 import time
 import threading
 
+def new_controller(identifier, params, get_state, get_time, actuate):
+    if params['Type'] == 'pid_p2p':
+        return Controller_PID_Point2Point(identifier, params, get_state, get_time, actuate)
+    elif params['Type'] == 'pid_velocity':
+        return Controller_PID_Velocity(identifier, params, get_state, get_time, actuate)
+    else:
+        raise ControllerTypeNotFoundError(str(params['Type']) + " is not a recognized type of controller!")
+
 class Controller_PID_Point2Point():
-    def __init__(self, get_state, get_time, actuate_motors, goals, params, quad_identifier):
-        self.quad_identifier = quad_identifier
-        self.actuate_motors = actuate_motors
+    def __init__(self, identifier, params, get_state, get_time, actuate):
+        self.quad_identifier = identifier
+        self.actuate_motors = actuate
         self.get_state = get_state
         self.get_time = get_time
-        self.goals = goals
+        self.goals = params['Goals']
         self.curr_goal = {'time': 0, 'position': (0,0,0), 'yaw': 0}
         self.MOTOR_LIMITS = params['Motor_limits']
         self.TILT_LIMITS = [(params['Tilt_limits'][0]/180.0)*3.14,(params['Tilt_limits'][1]/180.0)*3.14]
@@ -90,7 +98,6 @@ class Controller_PID_Point2Point():
 
     def start_thread(self,dt=0.005):
         self.dt = dt
-        self.pause = False
         self.thread_object = threading.Thread(target=self.thread_run)
         self.thread_object.start()
 
@@ -133,3 +140,6 @@ class Controller_PID_Velocity(Controller_PID_Point2Point):
         m4 = throttle - y_val - z_val
         M = np.clip([m1,m2,m3,m4],self.MOTOR_LIMITS[0],self.MOTOR_LIMITS[1])
         self.actuate_motors(self.quad_identifier,M)
+
+class ControllerTypeNotFoundError(Exception):
+    pass
