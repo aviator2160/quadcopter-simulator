@@ -1,6 +1,8 @@
 # Quadcopter simulator
 A quadcopter simulator with single and multi-quad simulations. The simulator supports time scaling (including real-time simulations) and headless mode (the simulator runs in background without a GUI update).
 
+This simulator environment was created by Abhijit Majumdar (<https://github.com/abhijitmajumdar/Quadcopter_simulator>) and modified by Avi Mittal.
+
 ![Single Quadcopter Simulation](/quad_sim.gif?raw=true "quad_sim")
 
 Single Quadcopter Simulation
@@ -64,7 +66,7 @@ The state space is defined as: *X = [x,y,z,x_dot,y_dot,z_dot,theta,phi,gamma,the
 It has methods to set_motor_speeds(), get_orientation(), get_position(), get_angular_rate(), get_linear_rate(), set_position() and set_orientation(), which can be used by the controller.
 
 ##### Graphical User Interface (GUI) class
-The GUI initialization takes in the same quadcopter parameter directory. It is optional to pass in the get methods for position and orientation of the quadcopter to the GUI initialization. It uses *Matplotlib* to plot a representation of the quadcopter, each update of which takes significantly more time than the quadcopter class update. It can be updated using the method update(), with the position and orientation of the quadcopter if the get methods are not defined while initializing the object.
+The GUI initialization takes in the same quadcopter parameter directory. It is optional to pass in the get methods for position and orientation of the quadcopter to the GUI initialization. It uses a *Matplotlib function animation* to plot a representation of the quadcopter, which updates only the parts of the plot that change. These updates occur at a fixed rate which is significantly slower than the quadcopter class update. It can also be updated using the method update(), with the position and orientation of the quadcopter if the get methods are not defined while initializing the object.
 
 ##### Controller class
 A demo to implement a controller class. It is initialized using the quadcopter object and a controller parameter dictionary. The quadcopter object is used to update the global time as well as the quadcopter state and also to set the motor speeds on the quadcopter. An example  parameter dictionary is provided which defines the different constants used by the controller. The update() method updates the motor speeds based on the control algorithm. The start_thread() method initializes the thread to keep updating the controller every *update_rate*(specified by the user).
@@ -83,16 +85,9 @@ Two example implementation of controller class are provided. One is to implement
 
 
 ## Changes
-- Fixed the quad dynamics to wrap angles to [-pi,pi]
-- Fixed the yaw controller to determine shortest path to turn to
-- Changed the yaw controller to a rate controller for better yaw control
-- Added gifs
-- Seperated classes into different files quadcopter.py, controller.py and gui.py
-- Added an example velocity controller class and its implementation. Inherited from P2P class
-- Added argparse to have a single file call all three example as command line arguments
-- Added control to change the axes movements - 'w','x','a','d' along x and y axes. ('s' is used to save figure by default)
-- Removed the single quadcopter class, since a single quadcopter using the multi-quad class(with keying) uses the same amount of resources(almost)
-- Added a stop thread method to Quadcopter and Controller classes to isolate from main thread
+- Fixed the quit using Ctrl+c (only works if the animated plot is not open)
+- Added pause/unpause functionality in gui with 'p' key
 
 ## To-do
-- Fix the quit using 'ctrl+c'
+- Fix headless mode to work after closing the gui or with a cmd argument
+- Test manual blitting instead of matplotlib animations, to see if it's faster
