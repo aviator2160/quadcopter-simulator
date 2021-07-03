@@ -16,7 +16,7 @@ class DynamicsManager():
     """
     
     def __init__(self, QUAD_DEFS, CTRL_DEFS):
-        self.WAIT_WAKE_RATE = 0.1
+        self.WAIT_WAKE_RATE = 0.02
         self.quads = quadcopter.Quadcopters(quads=QUAD_DEFS, get_time=self.get_time)
         self.ctrls = {}
         for key in CTRL_DEFS:
@@ -66,9 +66,7 @@ class DynamicsManager():
             self.time_paused += (datetime.datetime.now() - self.pause_start).total_seconds()
     
     def wait_until_time(self, end_time, check_quit):
-        while True:
-            if not self.run:
-                break
+        while self.run:
             remaining = (end_time - self.get_time()) * self.time_scaling
             if remaining <= 0:
                 break
