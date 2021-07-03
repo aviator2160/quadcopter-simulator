@@ -7,18 +7,20 @@ Created on Thu Jul  1 15:00:02 2021
 import quadcopter, controller
 
 import datetime
+import time
 
 class DynamicsManager():
     """
     Handles general physics (e.g. sim time) and interactions between different
     types of physics object.
     """
+    
     def __init__(self, QUAD_DEFS, CTRL_DEFS):
+        self.WAIT_WAKE_RATE = 0.1
         self.quads = quadcopter.Quadcopters(quads=QUAD_DEFS, get_time=self.get_time)
         self.ctrls = {}
         for key in CTRL_DEFS:
             self.ctrls[key] = controller.new_controller(identifier=key, params=CTRL_DEFS[key], get_state=self.quads.get_state, get_time=self.get_time, actuate=self.quads.set_motor_speeds)
-        self.start = datetime.datetime.now()
         self.TIME_SCALING_EPSILON = 0.01
         self.run = True
     
@@ -44,6 +46,7 @@ class DynamicsManager():
         else:
             self.time_scaling = self.TIME_SCALING_EPSILON
         self.pause = False
+        self.start = datetime.datetime.now()
         self.pause_start = self.start
         self.time_paused = 0
         self.quads.start_thread(phys_dt)
@@ -61,3 +64,18 @@ class DynamicsManager():
             self.pause_start = datetime.datetime.now()
         else:
             self.time_paused += (datetime.datetime.now() - self.pause_start).total_seconds()
+    
+    def wait_until_time(self, end_time, check_quit):
+        while True:
+            if not self.run:
+                break
+            remaining = (end_time - self.get_time()) * self.time_scaling
+            if remaining <= 0:
+                break
+            elif remaining < self.WAIT_WAKE_RATE:
+                time.sleep(remaining)
+            else:
+                time.sleep(self.WAIT_WAKE_RATE)
+    
+    def interrupt_handler(self, signal, frame):
+        self.run = False

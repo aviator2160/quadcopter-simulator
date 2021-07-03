@@ -83,18 +83,19 @@ class Controller_PID_Point2Point():
         # new_goal might not contain all possible goals
         for key in new_goal:
             self.curr_goal[key] = new_goal[key]
+        print(self.quad_identifier + " goal: " + str(self.curr_goal))
 
     def update_yaw_target(self,target):
         self.yaw_target = self.wrap_angle(target)
     
     def thread_run(self):
-        last_update = 0
+        update_num = 0
         while(self.run==True):
             time.sleep(0)
             curr_time = self.get_time()
-            if (curr_time - last_update) > self.dt:
+            if curr_time > update_num * self.dt:
                 self.update()
-                last_update = curr_time
+                update_num += 1
 
     def start_thread(self,dt=0.005):
         self.dt = dt

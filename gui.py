@@ -92,8 +92,10 @@ class GUI():
         self.init_plot()
         self.update()
     
+    def close(self):
+        plt.close(self.fig)
+    
     def toggle_pause(self):
-        
         self.pause = not self.pause
         self.pause_sim(self.pause)
         if self.pause == True:

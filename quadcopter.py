@@ -45,6 +45,7 @@ class Quadcopters():
             self.quads[key]['I'] = np.array([[ixx,0,0],[0,iyy,0],[0,0,izz]])
             self.quads[key]['invI'] = np.linalg.inv(self.quads[key]['I'])
         self.run = True
+        self.num_updates = 0
 
     def rotation_matrix(self,angles):
         ct = math.cos(angles[0])
@@ -87,6 +88,7 @@ class Quadcopters():
         return state_dot
 
     def update(self):
+        self.num_updates += 1
         for key in self.quads:
             self.ode.set_initial_value(self.quads[key]['state'],0).set_f_params(key)
             self.quads[key]['state'] = self.ode.integrate(self.ode.t + self.dt)
@@ -121,13 +123,13 @@ class Quadcopters():
         self.quads[quad_name]['state'][6:9] = orientation
 
     def thread_run(self):
-        last_update = 0
+        update_num = 0
         while(self.run==True):
             time.sleep(0)
             curr_time = self.get_time()
-            if (curr_time - last_update) > self.dt:
+            if curr_time > update_num * self.dt:
                 self.update()
-                last_update = curr_time
+                update_num += 1
 
     def start_thread(self,dt=0.002):
         self.dt = dt
@@ -135,4 +137,5 @@ class Quadcopters():
         self.thread_object.start()
 
     def stop_thread(self):
+        print(self.num_updates)
         self.run = False

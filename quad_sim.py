@@ -3,11 +3,11 @@ import signal
 import argparse
 
 # Constants
+HEADLESS = False
 TIME_SCALING = 1.0 # Any positive number(Smaller is faster). 1.0->Real Time, 0.0->Run as fast as possible
 PHYSICAL_DYNAMICS_UPDATE = 0.002 # seconds
 CONTROLLER_DYNAMICS_UPDATE = 0.005 # seconds
 run = True
-anim = None
 
 def Single_Point2Point():
     # Set goals to go to
@@ -34,16 +34,20 @@ def Single_Point2Point():
                             }
                         }
     
-    # Catch Ctrl+C to stop threads
-    signal.signal(signal.SIGINT, signal_handler)
     # Make objects for dynamics (quadcopters/controllers) and gui
     dyn_object = dynamics.DynamicsManager(QUAD_DEFS=QUADCOPTER_DEFS, CTRL_DEFS=CONTROLLER_DEFS)
-    gui_object = gui.GUI(QUAD_DEFS=QUADCOPTER_DEFS, get_data=dyn_object.visual_data, get_time=dyn_object.get_time)
+    if not HEADLESS:
+        gui_object = gui.GUI(QUAD_DEFS=QUADCOPTER_DEFS, get_data=dyn_object.visual_data, get_time=dyn_object.get_time)
+    # Catch Ctrl+C to stop threads
+    signal.signal(signal.SIGINT, dyn_object.interrupt_handler)
     # Start the threads
     dyn_object.start_threads(phys_dt=PHYSICAL_DYNAMICS_UPDATE, ctrl_dt=CONTROLLER_DYNAMICS_UPDATE, time_scaling=TIME_SCALING)
     # Update the GUI while switching between destination poitions
-    gui_object.animate(duration=SIM_DURATION, pause_sim=dyn_object.pause_threads, frame_rate=30)
-    # Stop threads once animations are done
+    if not HEADLESS:
+        gui_object.animate(duration=SIM_DURATION, pause_sim=dyn_object.pause_threads, frame_rate=30)
+        gui_object.close()
+    # Stop threads once animations are done, and when sim is done
+    dyn_object.wait_until_time(SIM_DURATION, check_quit)
     dyn_object.stop_threads()
 
 def Multi_Point2Point():
@@ -84,16 +88,20 @@ def Multi_Point2Point():
         }
     }
 
-    # Catch Ctrl+C to stop threads
-    signal.signal(signal.SIGINT, signal_handler)
     # Make objects for dynamics (quadcopters/controllers) and gui
     dyn_object = dynamics.DynamicsManager(QUAD_DEFS=QUADCOPTER_DEFS, CTRL_DEFS=CONTROLLER_DEFS)
-    gui_object = gui.GUI(QUAD_DEFS=QUADCOPTER_DEFS, get_data=dyn_object.visual_data, get_time=dyn_object.get_time)
+    if not HEADLESS:
+        gui_object = gui.GUI(QUAD_DEFS=QUADCOPTER_DEFS, get_data=dyn_object.visual_data, get_time=dyn_object.get_time)
+    # Catch Ctrl+C to stop threads
+    signal.signal(signal.SIGINT, dyn_object.interrupt_handler)
     # Start the threads
     dyn_object.start_threads(phys_dt=PHYSICAL_DYNAMICS_UPDATE, ctrl_dt=CONTROLLER_DYNAMICS_UPDATE, time_scaling=TIME_SCALING)
     # Update the GUI while switching between destination poitions
-    gui_object.animate(duration=SIM_DURATION, pause_sim=dyn_object.pause_threads, frame_rate=30)
-    # Stop threads once animations are done
+    if not HEADLESS:
+        gui_object.animate(duration=SIM_DURATION, pause_sim=dyn_object.pause_threads, frame_rate=30)
+        gui_object.close()
+    # Stop threads once animations are done, and when sim is done
+    dyn_object.wait_until_time(SIM_DURATION, check_quit)
     dyn_object.stop_threads()
 
 def Single_Velocity():
@@ -120,33 +128,38 @@ def Single_Velocity():
                             }
                         }
 
-    # Catch Ctrl+C to stop threads
-    signal.signal(signal.SIGINT, signal_handler)
     # Make objects for dynamics (quadcopters/controllers) and gui
     dyn_object = dynamics.DynamicsManager(QUAD_DEFS=QUADCOPTER_DEFS, CTRL_DEFS=CONTROLLER_DEFS)
     gui_object = gui.GUI(QUAD_DEFS=QUADCOPTER_DEFS, get_data=dyn_object.visual_data, get_time=dyn_object.get_time)
+    # Catch Ctrl+C to stop threads
+    signal.signal(signal.SIGINT, dyn_object.interrupt_handler)
     # Start the threads
-    dyn_object.start_threads(phys_dt=PHYSICAL_DYNAMICS_UPDATE, ctrl_dt=CONTROLLER_DYNAMICS_UPDATE, time_scaling=TIME_SCALING)
+    if not HEADLESS:
+        dyn_object.start_threads(phys_dt=PHYSICAL_DYNAMICS_UPDATE, ctrl_dt=CONTROLLER_DYNAMICS_UPDATE, time_scaling=TIME_SCALING)
     # Update the GUI while switching between destination poitions
-    gui_object.animate(duration=SIM_DURATION, pause_sim=dyn_object.pause_threads, frame_rate=30)
-    # Stop threads once animations are done
+    if not HEADLESS:
+        gui_object.animate(duration=SIM_DURATION, pause_sim=dyn_object.pause_threads, frame_rate=30)
+        gui_object.close()
+    # Stop threads once animations are done, and when sim is done
+    dyn_object.wait_until_time(SIM_DURATION, check_quit)
     dyn_object.stop_threads()
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Quadcopter Simulator")
-    parser.add_argument("--sim", help='single_p2p, multi_p2p or single_velocity', default='single_velocity')
+    parser.add_argument("--headless", help='Run without GUI', action='store_true')
+    parser.add_argument("--sim", help='single_p2p, multi_p2p or single_velocity', default='single_p2p')
     parser.add_argument("--time_scale", type=float, default=-1.0, help='Time scaling factor. 0.0:fastest,1.0:realtime,>1:slow, ex: --time_scale 0.1')
     parser.add_argument("--quad_update_time", type=float, default=0.0, help='delta time for quadcopter dynamics update(seconds), ex: --quad_update_time 0.002')
     parser.add_argument("--controller_update_time", type=float, default=0.0, help='delta time for controller update(seconds), ex: --controller_update_time 0.005')
     return parser.parse_args()
 
-def signal_handler(signal, frame):
+def check_quit():
     global run
-    run = False
-    print('Stopping...')
+    return not run
 
 if __name__ == "__main__":
     args = parse_args()
+    if args.headless: HEADLESS = True
     if args.time_scale>=0: TIME_SCALING = args.time_scale
     if args.quad_update_time>0: QUAD_DYNAMICS_UPDATE = args.quad_update_time
     if args.controller_update_time>0: CONTROLLER_DYNAMICS_UPDATE = args.controller_update_time
