@@ -17,7 +17,7 @@ def Single_Point2Point():
              {'time': 24, 'position': (-1, 1,4), 'yaw': 1.54}]
     SIM_DURATION = 32 # simulated seconds
     # Define the quadcopters
-    QUADCOPTER_DEFS={'q1':{'position':[1,0,4],'orientation':[0,0,0],'L':0.3,'r':0.1,'prop_size':[10,4.5],'weight':1.2}}
+    QUADCOPTER_DEFS={'q1':{'position':[1,0,4],'orientation':[0,0,0],'L':0.3,'r':0.1,'prop_size':[10,4.5],'mass':1.2}}
     # Controller parameters
     CONTROLLER_DEFS = {'q1':{
                             'Type':'pid_p2p',
@@ -58,8 +58,8 @@ def Multi_Point2Point():
                {'time': 10, 'position': (-1, 1,4)}]
     SIM_DURATION = 16 # simulated seconds
     # Define the quadcopters
-    QUADCOPTER_DEFS={'q1':{'position':[1,0,4],'orientation':[0,0,0],'L':0.3,'r':0.1,'prop_size':[10,4.5],'weight':1.2},
-        'q2':{'position':[-1,0,4],'orientation':[0,0,0],'L':0.15,'r':0.05,'prop_size':[6,4.5],'weight':0.7}}
+    QUADCOPTER_DEFS={'q1':{'position':[1,0,4],'orientation':[0,0,0],'L':0.3,'r':0.1,'prop_size':[10,4.5],'mass':1.2},
+        'q2':{'position':[-1,0,4],'orientation':[0,0,0],'L':0.15,'r':0.05,'prop_size':[6,4.5],'mass':0.5}}
     # Controller parameters
     CONTROLLER_DEFS={
         'q1':{
@@ -69,7 +69,7 @@ def Multi_Point2Point():
             'Tilt_limits':[-10,10],
             'Yaw_Control_Limits':[-900,900],
             'Z_XY_offset':500,
-            'Linear_PID':{'P':[300,300,7000],'I':[0.04,0.04,4.5],'D':[450,450,5000]},
+            'Linear_PID':{'P':[300,300,9000],'I':[0.04,0.04,4.5],'D':[450,450,5000]},
             'Linear_To_Angular_Scaler':[1,1,0],
             'Yaw_Rate_Scaler':0.18,
             'Angular_PID':{'P':[22000,22000,1500],'I':[0,0,1.2],'D':[12000,12000,0]},
@@ -81,7 +81,7 @@ def Multi_Point2Point():
             'Tilt_limits':[-10,10],
             'Yaw_Control_Limits':[-900,900],
             'Z_XY_offset':500,
-            'Linear_PID':{'P':[300,300,7000],'I':[0.04,0.04,4.5],'D':[450,450,5000]},
+            'Linear_PID':{'P':[300,300,12000],'I':[0.04,0.04,4.5],'D':[450,450,5000]},
             'Linear_To_Angular_Scaler':[1,1,0],
             'Yaw_Rate_Scaler':0.18,
             'Angular_PID':{'P':[22000,22000,1500],'I':[0,0,1.2],'D':[12000,12000,0]},
@@ -112,7 +112,7 @@ def Single_Velocity():
              {'time': 15, 'position': (   0,-0.5,2)}]
     SIM_DURATION = 20 # simulated seconds
     # Define the quadcopters
-    QUADCOPTER_DEFS={'q1':{'position':[0,0,0],'orientation':[0,0,0],'L':0.3,'r':0.1,'prop_size':[10,4.5],'weight':1.2}}
+    QUADCOPTER_DEFS={'q1':{'position':[0,0,0],'orientation':[0,0,0],'L':0.3,'r':0.1,'prop_size':[10,4.5],'mass':1.2}}
     # Controller parameters
     CONTROLLER_DEFS={'q1':{
                             'Type':'pid_velocity',
@@ -147,7 +147,7 @@ def Single_Velocity():
 def parse_args():
     parser = argparse.ArgumentParser(description="Quadcopter Simulator")
     parser.add_argument("--headless", help='Run without GUI', action='store_true')
-    parser.add_argument("--sim", help='single_p2p, multi_p2p or single_velocity', default='single_p2p')
+    parser.add_argument("--sim", help='single_p2p, multi_p2p or single_velocity', default='multi_p2p')
     parser.add_argument("--time_scale", type=float, default=-1.0, help='Time scaling factor. 0.0:fastest,1.0:realtime,>1:slow, ex: --time_scale 0.1')
     parser.add_argument("--quad_update_time", type=float, default=0.0, help='delta time for quadcopter dynamics update(seconds), ex: --quad_update_time 0.002')
     parser.add_argument("--controller_update_time", type=float, default=0.0, help='delta time for controller update(seconds), ex: --controller_update_time 0.005')

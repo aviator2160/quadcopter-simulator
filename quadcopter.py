@@ -38,10 +38,11 @@ class Quadcopters():
             self.quads[key]['m2'] = Propeller(self.quads[key]['prop_size'][0],self.quads[key]['prop_size'][1])
             self.quads[key]['m3'] = Propeller(self.quads[key]['prop_size'][0],self.quads[key]['prop_size'][1])
             self.quads[key]['m4'] = Propeller(self.quads[key]['prop_size'][0],self.quads[key]['prop_size'][1])
+            self.quads[key]['external_force'] = np.zeros(3)
             # From Quadrotor Dynamics and Control by Randal Beard
-            ixx=((2*self.quads[key]['weight']*self.quads[key]['r']**2)/5)+(2*self.quads[key]['weight']*self.quads[key]['L']**2)
+            ixx=((2*self.quads[key]['mass']*self.quads[key]['r']**2)/5)+(2*self.quads[key]['mass']*self.quads[key]['L']**2)
             iyy=ixx
-            izz=((2*self.quads[key]['weight']*self.quads[key]['r']**2)/5)+(4*self.quads[key]['weight']*self.quads[key]['L']**2)
+            izz=((2*self.quads[key]['mass']*self.quads[key]['r']**2)/5)+(4*self.quads[key]['mass']*self.quads[key]['L']**2)
             self.quads[key]['I'] = np.array([[ixx,0,0],[0,iyy,0],[0,0,izz]])
             self.quads[key]['invI'] = np.linalg.inv(self.quads[key]['I'])
         self.run = True
@@ -70,7 +71,7 @@ class Quadcopters():
         state_dot[1] = self.quads[key]['state'][4]
         state_dot[2] = self.quads[key]['state'][5]
         # The acceleration
-        x_dotdot = np.array([0,0,-self.quads[key]['weight']*self.g]) + np.dot(self.rotation_matrix(self.quads[key]['state'][6:9]),np.array([0,0,(self.quads[key]['m1'].thrust + self.quads[key]['m2'].thrust + self.quads[key]['m3'].thrust + self.quads[key]['m4'].thrust)]))/self.quads[key]['weight']
+        x_dotdot = np.array([0,0,-self.g]) + np.dot(self.rotation_matrix(self.quads[key]['state'][6:9]),np.array([0,0,(self.quads[key]['m1'].thrust + self.quads[key]['m2'].thrust + self.quads[key]['m3'].thrust + self.quads[key]['m4'].thrust)]))/self.quads[key]['mass']
         state_dot[3] = x_dotdot[0]
         state_dot[4] = x_dotdot[1]
         state_dot[5] = x_dotdot[2]
