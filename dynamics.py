@@ -15,7 +15,7 @@ class DynamicsManager():
     types of physics object.
     """
     
-    def __init__(self, QUAD_DEFS, CTRL_DEFS):
+    def __init__(self, QUAD_DEFS, CTRL_DEFS, PAYLOAD_DEFS=None):
         self.WAIT_WAKE_RATE = 0.02
         self.quads = quadcopter.Quadcopters(quads=QUAD_DEFS, get_time=self.get_time)
         self.ctrls = {}

@@ -71,7 +71,7 @@ class Quadcopters():
         state_dot[1] = self.quads[key]['state'][4]
         state_dot[2] = self.quads[key]['state'][5]
         # The acceleration
-        x_dotdot = np.array([0,0,-self.g]) + np.dot(self.rotation_matrix(self.quads[key]['state'][6:9]),np.array([0,0,(self.quads[key]['m1'].thrust + self.quads[key]['m2'].thrust + self.quads[key]['m3'].thrust + self.quads[key]['m4'].thrust)]))/self.quads[key]['mass']
+        x_dotdot = np.array([0,0,-self.g]) + self.quads[key]['external_force']/self.quads[key]['mass'] + np.dot(self.rotation_matrix(self.quads[key]['state'][6:9]),np.array([0,0,(self.quads[key]['m1'].thrust + self.quads[key]['m2'].thrust + self.quads[key]['m3'].thrust + self.quads[key]['m4'].thrust)]))/self.quads[key]['mass']
         state_dot[3] = x_dotdot[0]
         state_dot[4] = x_dotdot[1]
         state_dot[5] = x_dotdot[2]
@@ -122,6 +122,12 @@ class Quadcopters():
 
     def set_orientation(self,quad_name,orientation):
         self.quads[quad_name]['state'][6:9] = orientation
+    
+    def add_external_force(self,quad_name,force):
+        self.quads[quad_name]['external_force'] += force
+    
+    def set_external_force(self,quad_name,force):
+        self.quads[quad_name]['external_force'] = force
 
     def thread_run(self):
         update_num = 0
