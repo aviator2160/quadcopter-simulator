@@ -1,5 +1,4 @@
 import numpy as np
-import math
 import scipy.integrate
 import time
 import threading
@@ -15,7 +14,7 @@ class Propeller():
     def set_speed(self,speed):
         self.speed = speed
         # From http://www.electricrcaircraftguy.com/2013/09/propeller-static-dynamic-thrust-equation.html
-        self.thrust = 4.392e-8 * self.speed * math.pow(self.dia,3.5)/(math.sqrt(self.pitch))
+        self.thrust = 4.392e-8 * self.speed * np.power(self.dia,3.5)/(np.sqrt(self.pitch))
         self.thrust = self.thrust*(4.23e-4 * self.speed * self.pitch)
         if self.thrust_unit == 'Kg':
             self.thrust = self.thrust*0.101972
@@ -49,12 +48,12 @@ class Quadcopters():
         self.num_updates = 0
 
     def rotation_matrix(self,angles):
-        ct = math.cos(angles[0])
-        cp = math.cos(angles[1])
-        cg = math.cos(angles[2])
-        st = math.sin(angles[0])
-        sp = math.sin(angles[1])
-        sg = math.sin(angles[2])
+        ct = np.cos(angles[0])
+        cp = np.cos(angles[1])
+        cg = np.cos(angles[2])
+        st = np.sin(angles[0])
+        sp = np.sin(angles[1])
+        sg = np.sin(angles[2])
         R_x = np.array([[1,0,0],[0,ct,-st],[0,st,ct]])
         R_y = np.array([[cp,0,sp],[0,1,0],[-sp,0,cp]])
         R_z = np.array([[cg,-sg,0],[sg,cg,0],[0,0,1]])
