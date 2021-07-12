@@ -1,9 +1,8 @@
 import numpy as np
 import math
-import time
-import threading
 
 def new_controller(identifier, params, get_state, get_time, actuate):
+    # identifier is currently used ONLY for printing goals
     if params['Type'] == 'pid_p2p':
         return Controller_PID_Point2Point(identifier, params, get_state, get_time, actuate)
     elif params['Type'] == 'pid_velocity':
@@ -13,7 +12,7 @@ def new_controller(identifier, params, get_state, get_time, actuate):
 
 class Controller_PID_Point2Point():
     def __init__(self, identifier, params, get_state, get_time, actuate):
-        self.quad_identifier = identifier
+        self.identifier = identifier
         self.actuate_motors = actuate
         self.get_state = get_state
         self.get_time = get_time
@@ -43,11 +42,11 @@ class Controller_PID_Point2Point():
     def wrap_angle(self,val):
         return( ( val + np.pi) % (2 * np.pi ) - np.pi )
 
-    def update(self):
+    def update(self, wut):
         if (len(self.goals) > 0) and (self.get_time() > self.goals[0]['time']):
             self.update_goal(self.goals.pop(0))
         [dest_x,dest_y,dest_z] = self.curr_goal['position']
-        [x,y,z,x_dot,y_dot,z_dot,theta,phi,gamma,theta_dot,phi_dot,gamma_dot] = self.get_state(self.quad_identifier)
+        [x,y,z,x_dot,y_dot,z_dot,theta,phi,gamma,theta_dot,phi_dot,gamma_dot] = self.get_state()
         x_error = dest_x-x
         y_error = dest_y-y
         z_error = dest_z-z
@@ -77,40 +76,23 @@ class Controller_PID_Point2Point():
         m3 = throttle - x_val + z_val
         m4 = throttle - y_val - z_val
         M = np.clip([m1,m2,m3,m4],self.MOTOR_LIMITS[0],self.MOTOR_LIMITS[1])
-        self.actuate_motors(self.quad_identifier,M)
+        self.actuate_motors(M)
 
     def update_goal(self,new_goal):
         # new_goal might not contain all possible goals
         for key in new_goal:
             self.curr_goal[key] = new_goal[key]
-        print(self.quad_identifier + " goal: " + str(self.curr_goal))
+        print(self.identifier + " goal: " + str(self.curr_goal))
 
     def update_yaw_target(self,target):
         self.yaw_target = self.wrap_angle(target)
-    
-    def thread_run(self):
-        update_num = 0
-        while(self.run==True):
-            time.sleep(0)
-            curr_time = self.get_time()
-            if curr_time > update_num * self.dt:
-                self.update()
-                update_num += 1
-
-    def start_thread(self,dt=0.005):
-        self.dt = dt
-        self.thread_object = threading.Thread(target=self.thread_run)
-        self.thread_object.start()
-
-    def stop_thread(self):
-        self.run = False
 
 class Controller_PID_Velocity(Controller_PID_Point2Point):
     def update(self):
         if (len(self.goals) > 0) and (self.get_time() > self.goals[0]['time']):
             self.update_goal(self.goals.pop(0))
         [dest_x,dest_y,dest_z] = self.curr_goal['position']
-        [x,y,z,x_dot,y_dot,z_dot,theta,phi,gamma,theta_dot,phi_dot,gamma_dot] = self.get_state(self.quad_identifier)
+        [x,y,z,x_dot,y_dot,z_dot,theta,phi,gamma,theta_dot,phi_dot,gamma_dot] = self.get_state()
         x_error = dest_x-x_dot
         y_error = dest_y-y_dot
         z_error = dest_z-z
@@ -140,7 +122,7 @@ class Controller_PID_Velocity(Controller_PID_Point2Point):
         m3 = throttle - x_val + z_val
         m4 = throttle - y_val - z_val
         M = np.clip([m1,m2,m3,m4],self.MOTOR_LIMITS[0],self.MOTOR_LIMITS[1])
-        self.actuate_motors(self.quad_identifier,M)
+        self.actuate_motors(M)
 
 class ControllerTypeNotFoundError(Exception):
     pass
