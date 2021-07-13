@@ -5,14 +5,16 @@ Created on Sun Jul  4 16:49:33 2021
 @author: aviat
 """
 
-import dynamics,gui
+from physics_manager import PhysicsManager
+from gui import GUI
+
 import signal
 import argparse
 
 # Constants
 HEADLESS = False
-TIME_SCALING = 1.0 # Any positive number(Smaller is faster). 1.0->Real Time, 0.0->Run as fast as possible
-PHYSICAL_DYNAMICS_UPDATE = 0.002 # seconds
+TIME_SCALING = 3.0 # Any positive number(Smaller is faster). 1.0->Real Time, 0.0->Run as fast as possible
+PHYSICAL_DYNAMICS_UPDATE = 0.0005 # seconds
 CONTROLLER_DYNAMICS_UPDATE = 0.005 # seconds
 run = True
 
@@ -26,9 +28,9 @@ def Slung_Stationary():
         'q1':{'position':[1,0,4],'orientation':[0,0,0],'L':0.3,'r':0.1,'prop_size':[10,4.5],'mass':1.0},
     }
     PAYLOAD_DEFS={
-        'p1':{'position':[1,0,4],'orientation':[0,0,0],'x':0.4,'y':0.4,'z':0.2,'mass':0.4,
-              'hardpoints':[[0.2,0.2,0],[-0.2,0.2,0],[-0.2,-0.2,0],[0.2,-0.2,0]],
-              'forces':[[0,0,0],[0,0,0],[0,0,0],[0,0,0]]}
+        'p1':{'position':[1,0,2],'orientation':[0,0,0],'x':0.4,'y':0.4,'z':0.2,'mass':0.4,
+              #'hardpoints':[[0.2,0.2,0],[-0.2,0.2,0],[-0.2,-0.2,0],[0.2,-0.2,0]]}
+              'hardpoints':[[0.3,0,0],[0,0.3,0],[-0.3,0,0],[0,-0.3,0]]}
     }
     # Controller parameters
     CONTROLLER_DEFS={
@@ -46,20 +48,20 @@ def Slung_Stationary():
         }
     }
     # Make objects for dynamics (quadcopters/controllers) and gui
-    dyn_object = dynamics.DynamicsManager(QUAD_DEFS=QUADCOPTER_DEFS, CTRL_DEFS=CONTROLLER_DEFS, LOAD_DEFS=PAYLOAD_DEFS)
+    phys = PhysicsManager(QUADCOPTER_DEFS, CONTROLLER_DEFS, PAYLOAD_DEFS)
     if not HEADLESS:
-        gui_object = gui.GUI(QUAD_DEFS=QUADCOPTER_DEFS, get_data=dyn_object.visual_data, get_time=dyn_object.get_time)
+        gui = GUI(QUAD_DEFS=QUADCOPTER_DEFS, LOAD_DEFS=PAYLOAD_DEFS, get_data=phys.visual_data, get_time=phys.get_time)
     # Catch Ctrl+C to stop threads
-    signal.signal(signal.SIGINT, dyn_object.interrupt_handler)
+    signal.signal(signal.SIGINT, phys.on_keyboard_interrupt)
     # Start the threads
-    dyn_object.start_threads(phys_dt=PHYSICAL_DYNAMICS_UPDATE, ctrl_dt=CONTROLLER_DYNAMICS_UPDATE, time_scaling=TIME_SCALING)
+    phys.start_threads(phys_dt=PHYSICAL_DYNAMICS_UPDATE, ctrl_dt=CONTROLLER_DYNAMICS_UPDATE, time_scaling=TIME_SCALING)
     # Update the GUI while switching between destination poitions
     if not HEADLESS:
-        gui_object.animate(duration=SIM_DURATION, pause_sim=dyn_object.pause_threads, frame_rate=30)
-        gui_object.close()
+        gui.animate(duration=SIM_DURATION, pause_sim=phys.pause_threads, frame_rate=30)
+        gui.close()
     # Stop threads once animations are done, and when sim is done
-    #dyn_object.wait_until_time(SIM_DURATION, check_quit)
-    dyn_object.stop_threads()
+    #phys.wait_until_time(SIM_DURATION, check_quit)
+    phys.stop_threads()
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Quadcopter Simulator")

@@ -7,8 +7,9 @@ import sys
 
 class GUI():
     # 'quad_list' is a dictionary of format: quad_list = {'quad_1_name':{'position':quad_1_position,'orientation':quad_1_orientation,'arm_span':quad_1_arm_span}, ...}
-    def __init__(self, QUAD_DEFS, get_data, get_time):
+    def __init__(self, QUAD_DEFS, LOAD_DEFS, get_data, get_time):
         self.quads = QUAD_DEFS
+        self.loads = LOAD_DEFS
         self.get_data = get_data
         self.get_time = get_time
         self.fig = plt.figure()
@@ -47,6 +48,14 @@ class GUI():
             blit_artists.append(self.quads[key]['l1'])
             blit_artists.append(self.quads[key]['l2'])
             blit_artists.append(self.quads[key]['hub'])
+        for key in self.loads:
+            self.loads[key]['lines'] = [None] * 4
+            self.loads[key]['lines'][0], = self.ax.plot([],[],[],color='red',linewidth=3,antialiased=False)
+            self.loads[key]['lines'][1], = self.ax.plot([],[],[],color='gold',linewidth=3,antialiased=False)
+            self.loads[key]['lines'][2], = self.ax.plot([],[],[],color='green',linewidth=3,antialiased=False)
+            self.loads[key]['lines'][3], = self.ax.plot([],[],[],color='blue',linewidth=3,antialiased=False)
+            for line in self.loads[key]['lines']:
+                blit_artists.append(line)
         return tuple(blit_artists)
     
     def update(self, i=0):
@@ -71,6 +80,18 @@ class GUI():
             blit_artists.append(self.quads[key]['l1'])
             blit_artists.append(self.quads[key]['l2'])
             blit_artists.append(self.quads[key]['hub'])
+        for key in self.loads:
+            self.loads[key]['position'] = data[key]['position']
+            self.loads[key]['orientation'] = data[key]['orientation']
+            R = self.rotation_matrix(self.loads[key]['orientation'])
+            points = np.array(self.loads[key]['hardpoints']).T
+            points = np.dot(R,points)
+            points[0,:] += self.loads[key]['position'][0]
+            points[1,:] += self.loads[key]['position'][1]
+            points[2,:] += self.loads[key]['position'][2]
+            for j,line in enumerate(self.loads[key]['lines']):
+                line.set_data_3d(*zip(self.loads[key]['position'], points[:,j]))
+                blit_artists.append(line)
         return tuple(blit_artists)
     
     def frame_iter(self):

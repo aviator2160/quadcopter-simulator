@@ -5,6 +5,7 @@ Created on Thu Jul  1 15:00:02 2021
 @author: aviat
 """
 from quadcopter import Quadcopter
+from payload import Payload
 import controller
 
 import datetime
@@ -17,15 +18,18 @@ class PhysicsManager():
     types of physics object.
     """
     
-    def __init__(self, QUAD_DEFS, CTRL_DEFS, PAYLOAD_DEFS=None):
+    def __init__(self, QUAD_DEFS, CTRL_DEFS, LOAD_DEFS=None):
         self.WAIT_WAKE_RATE = 0.02
+        self.TIME_SCALING_EPSILON = 0.01
         self.quads = {}
         for key in QUAD_DEFS:
             self.quads[key] = Quadcopter(QUAD_DEFS[key])
         self.ctrls = {}
         for key in CTRL_DEFS:
             self.ctrls[key] = controller.new_controller(identifier=key, params=CTRL_DEFS[key], get_state=self.quads[key].get_state, get_time=self.get_time, actuate=self.quads[key].set_motor_speeds)
-        self.TIME_SCALING_EPSILON = 0.01
+        self.loads = {}
+        for key in LOAD_DEFS:
+            self.loads[key] = Payload(LOAD_DEFS[key])
     
     def get_time(self, scaled=True):
         if self.pause == False:
@@ -41,11 +45,15 @@ class PhysicsManager():
         data = {}
         for key in self.quads:
             data[key] = dict([('position', self.quads[key].get_position()), ('orientation', self.quads[key].get_orientation())])
+        for key in self.loads:
+            data[key] = dict([('position', self.loads[key].get_position()), ('orientation', self.loads[key].get_orientation())])
         return data
     
     def phys_update(self, dt):
         for quad in self.quads.values():
             quad.update(dt)
+        for load in self.loads.values():
+            load.update(dt)
     
     def start_threads(self, phys_dt, ctrl_dt, time_scaling):
         if time_scaling > self.TIME_SCALING_EPSILON:
