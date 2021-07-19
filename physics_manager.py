@@ -6,8 +6,10 @@ Created on Thu Jul  1 15:00:02 2021
 """
 from quadcopter import Quadcopter
 from payload import Payload
+from cable import Cable
 import controller
 
+import numpy as np
 import datetime
 import time
 import threading
@@ -18,7 +20,7 @@ class PhysicsManager():
     types of physics object.
     """
     
-    def __init__(self, QUAD_DEFS, CTRL_DEFS, LOAD_DEFS=None):
+    def __init__(self, QUAD_DEFS, CTRL_DEFS, LOAD_DEFS=None, CABLE_DEFS=None):
         self.WAIT_WAKE_RATE = 0.02
         self.TIME_SCALING_EPSILON = 0.01
         self.quads = {}
@@ -30,6 +32,9 @@ class PhysicsManager():
         self.loads = {}
         for key in LOAD_DEFS:
             self.loads[key] = Payload(LOAD_DEFS[key])
+        self.cables = {}
+        for key,defs in CABLE_DEFS.items():
+            self.cables[key] = Cable(self.quads[defs['quad']],self.loads[defs['load']],defs['hardpoint'],defs['stiffness'],defs['damping'])
     
     def get_time(self, scaled=True):
         if self.pause == False:
@@ -47,13 +52,20 @@ class PhysicsManager():
             data[key] = dict([('position', self.quads[key].get_position()), ('orientation', self.quads[key].get_orientation())])
         for key in self.loads:
             data[key] = dict([('position', self.loads[key].get_position()), ('orientation', self.loads[key].get_orientation())])
+        for key,cable in self.cables.items():
+            data[key] = zip(cable.quad.get_position(), cable.load.get_hardpoint(cable.hardpoint_num))
         return data
     
     def phys_update(self, dt):
         for quad in self.quads.values():
             quad.update(dt)
+            quad.set_external_force(np.zeros(3))
         for load in self.loads.values():
             load.update(dt)
+        for cable in self.cables.values():
+            cable.update(dt)
+        for ctrl in self.ctrls.values():
+            ctrl.update(dt)
     
     def start_threads(self, phys_dt, ctrl_dt, time_scaling):
         if time_scaling > self.TIME_SCALING_EPSILON:
@@ -69,8 +81,8 @@ class PhysicsManager():
         self.phys_thread.start()
         self.ctrl_threads = {}
         for key,ctrl in self.ctrls.items():
-            self.ctrl_threads[key] = threading.Thread(target=self.check_thread_update,args=(phys_dt,ctrl.update))
-            self.ctrl_threads[key].start()
+            self.ctrl_threads[key] = threading.Thread(target=self.check_thread_update,args=(ctrl_dt,ctrl.update))
+            #self.ctrl_threads[key].start()
     
     def check_thread_update(self, dt, update, args=None):
         update_num = 0

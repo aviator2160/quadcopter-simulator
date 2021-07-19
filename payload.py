@@ -90,3 +90,7 @@ class Payload():
         
     def set_force_at(self,hardpoint_num,force):
         self.applied_forces[:,hardpoint_num] = force
+    
+    def get_hardpoint(self,hardpoint_num):
+        R = util.rotation_matrix(self.state[6:9])
+        return self.state[0:3] + np.dot(R,self.hardpoints[:,hardpoint_num])

@@ -7,9 +7,10 @@ import sys
 
 class GUI():
     # 'quad_list' is a dictionary of format: quad_list = {'quad_1_name':{'position':quad_1_position,'orientation':quad_1_orientation,'arm_span':quad_1_arm_span}, ...}
-    def __init__(self, QUAD_DEFS, LOAD_DEFS, get_data, get_time):
+    def __init__(self, QUAD_DEFS, LOAD_DEFS, CABLE_DEFS, get_data, get_time):
         self.quads = QUAD_DEFS
         self.loads = LOAD_DEFS
+        self.cables = CABLE_DEFS
         self.get_data = get_data
         self.get_time = get_time
         self.fig = plt.figure()
@@ -56,11 +57,17 @@ class GUI():
             self.loads[key]['lines'][3], = self.ax.plot([],[],[],color='blue',linewidth=3,antialiased=False)
             for line in self.loads[key]['lines']:
                 blit_artists.append(line)
+        for key in self.cables:
+            self.cables[key]['line'], = self.ax.plot([],[],[],color='black',linewidth=0.5,antialiased=False)
+            blit_artists.append(self.cables[key]['line'])
         return tuple(blit_artists)
     
     def update(self, i=0):
         blit_artists = []
         data = self.get_data()
+        for key,cable in self.cables.items():
+            cable['line'].set_data_3d(*data[key])
+            blit_artists.append(cable['line'])
         for key in self.quads:
             self.quads[key]['position'] = data[key]['position']
             self.quads[key]['orientation'] = data[key]['orientation']

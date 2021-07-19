@@ -13,22 +13,21 @@ import argparse
 
 # Constants
 HEADLESS = False
-TIME_SCALING = 3.0 # Any positive number(Smaller is faster). 1.0->Real Time, 0.0->Run as fast as possible
-PHYSICAL_DYNAMICS_UPDATE = 0.0005 # seconds
-CONTROLLER_DYNAMICS_UPDATE = 0.005 # seconds
+TIME_SCALING = 1.0 # Any positive number(Smaller is faster). 1.0->Real Time, 0.0->Run as fast as possible
+PHYSICAL_DYNAMICS_UPDATE = 0.002 # seconds
+CONTROLLER_DYNAMICS_UPDATE = 0.05 # seconds
 run = True
 
-def Slung_Stationary():
+def Slung_P2P():
     # Set goals to go to
-    GOALS_1 = [{'time': 0,  'position': (-1,-1,4)},
-               {'time': 8,  'position': ( 1, 1,2)}]
-    SIM_DURATION = 16 # simulated seconds
+    GOALS_1 = [{'time': 0,  'position': (1,0,5)}]
+    SIM_DURATION = 10 # simulated seconds
     # Define the quadcopters
     QUADCOPTER_DEFS={
-        'q1':{'position':[1,0,4],'orientation':[0,0,0],'L':0.3,'r':0.1,'prop_size':[10,4.5],'mass':1.0},
+        'q1':{'position':[-2,0,4],'orientation':[0,0,0],'L':0.3,'r':0.1,'prop_size':[10,4.5],'mass':1.0},
     }
     PAYLOAD_DEFS={
-        'p1':{'position':[1,0,2],'orientation':[0,0,0],'x':0.4,'y':0.4,'z':0.2,'mass':0.4,
+        'p1':{'position':[-2,0,2],'orientation':[0,0,0],'x':0.4,'y':0.4,'z':0.2,'mass':1.5,
               #'hardpoints':[[0.2,0.2,0],[-0.2,0.2,0],[-0.2,-0.2,0],[0.2,-0.2,0]]}
               'hardpoints':[[0.3,0,0],[0,0.3,0],[-0.3,0,0],[0,-0.3,0]]}
     }
@@ -47,10 +46,16 @@ def Slung_Stationary():
             'Angular_PID':{'P':[22000,22000,1500],'I':[0,0,1.2],'D':[12000,12000,0]},
         }
     }
+    CABLE_DEFS={
+        'c1':{'quad':'q1','load':'p1','hardpoint':0,'stiffness':100,'damping':1},
+        'c2':{'quad':'q1','load':'p1','hardpoint':1,'stiffness':100,'damping':1},
+        'c3':{'quad':'q1','load':'p1','hardpoint':2,'stiffness':100,'damping':1},
+        'c4':{'quad':'q1','load':'p1','hardpoint':3,'stiffness':100,'damping':1},
+    }
     # Make objects for dynamics (quadcopters/controllers) and gui
-    phys = PhysicsManager(QUADCOPTER_DEFS, CONTROLLER_DEFS, PAYLOAD_DEFS)
+    phys = PhysicsManager(QUADCOPTER_DEFS, CONTROLLER_DEFS, PAYLOAD_DEFS, CABLE_DEFS)
     if not HEADLESS:
-        gui = GUI(QUAD_DEFS=QUADCOPTER_DEFS, LOAD_DEFS=PAYLOAD_DEFS, get_data=phys.visual_data, get_time=phys.get_time)
+        gui = GUI(QUAD_DEFS=QUADCOPTER_DEFS, LOAD_DEFS=PAYLOAD_DEFS, CABLE_DEFS=CABLE_DEFS, get_data=phys.visual_data, get_time=phys.get_time)
     # Catch Ctrl+C to stop threads
     signal.signal(signal.SIGINT, phys.on_keyboard_interrupt)
     # Start the threads
@@ -82,6 +87,6 @@ if __name__ == "__main__":
     if args.time_scale>=0: TIME_SCALING = args.time_scale
     if args.quad_update_time>0: QUAD_DYNAMICS_UPDATE = args.quad_update_time
     if args.controller_update_time>0: CONTROLLER_DYNAMICS_UPDATE = args.controller_update_time
-    Slung_Stationary()
+    Slung_P2P()
     # if args.sim == 'slung_stat':
     #     Slung_Stationary()
