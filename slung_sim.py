@@ -27,7 +27,7 @@ def Slung_P2P():
         'q1':{'position':[-2,0,4],'orientation':[0,0,0],'L':0.3,'r':0.1,'prop_size':[10,4.5],'mass':1.0},
     }
     PAYLOAD_DEFS={
-        'p1':{'position':[-2,0,2],'orientation':[0,0,0],'x':0.4,'y':0.4,'z':0.2,'mass':1.5,
+        'p1':{'position':[-2,0,2],'orientation':[0,0,0],'x':0.4,'y':0.4,'z':0.2,'mass':1.0,
               #'hardpoints':[[0.2,0.2,0],[-0.2,0.2,0],[-0.2,-0.2,0],[0.2,-0.2,0]]}
               'hardpoints':[[0.3,0,0],[0,0.3,0],[-0.3,0,0],[0,-0.3,0]]}
     }
@@ -44,7 +44,7 @@ def Slung_P2P():
             'Linear_To_Angular_Scaler':[1,1,0],
             'Yaw_Rate_Scaler':0.18,
             'Angular_PID':{'P':[22000,22000,1500],'I':[0,0,1.2],'D':[12000,12000,0]},
-        }
+        },
     }
     CABLE_DEFS={
         'c1':{'quad':'q1','load':'p1','hardpoint':0,'stiffness':100,'damping':1},

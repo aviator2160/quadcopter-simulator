@@ -27,6 +27,9 @@ def state_dot(time, state, load):
     state_dot[7] = state_t[10]
     state_dot[8] = state_t[11]
     # The angular accelerations
+    # Based on Wikipedia "Moment of inertia"
+    #body_omega = np.dot(load.invR, state_t[9:12])
+    #omega_dot = load.R @ load.invJ @ (load.body_moment - np.cross(body_omega, load.R @ load.J @ body_omega))
     omega = state_t[9:12]
     omega_dot = np.dot(load.invJ, (load.body_moment - np.cross(omega, np.dot(load.J, omega))))
     state_dot[9] = omega_dot[0]
@@ -57,11 +60,11 @@ class Payload():
         self.invJ = np.linalg.inv(self.J)
         
     def update(self, dt):
-        R = util.rotation_matrix(self.state[6:9])
-        invR = np.linalg.inv(R)
-        body_forces = np.dot(invR, self.applied_forces)
+        self.R = util.rotation_matrix(self.state[6:9])
+        self.invR = self.R.transpose()
+        body_forces = np.dot(self.invR, self.applied_forces)
         body_force_moments = np.dot(self.force_geometry, body_forces.flatten(order='F'))
-        self.inertial_force = np.dot(R, body_force_moments[0:3])
+        self.inertial_force = np.dot(self.R, body_force_moments[0:3])
         self.body_moment = body_force_moments[3:6]
         Payload.ode.set_initial_value(self.state,0).set_f_params(self)
         self.state = Payload.ode.integrate(Payload.ode.t + dt)

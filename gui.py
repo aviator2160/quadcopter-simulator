@@ -42,13 +42,6 @@ class GUI():
 
     def init_plot(self):
         blit_artists = []
-        for key in self.quads:
-            self.quads[key]['l1'], = self.ax.plot([],[],[],color='blue',linewidth=3,antialiased=False)
-            self.quads[key]['l2'], = self.ax.plot([],[],[],color='red',linewidth=3,antialiased=False)
-            self.quads[key]['hub'], = self.ax.plot([],[],[],marker='o',color='green', markersize=6,antialiased=False)
-            blit_artists.append(self.quads[key]['l1'])
-            blit_artists.append(self.quads[key]['l2'])
-            blit_artists.append(self.quads[key]['hub'])
         for key in self.loads:
             self.loads[key]['lines'] = [None] * 4
             self.loads[key]['lines'][0], = self.ax.plot([],[],[],color='red',linewidth=3,antialiased=False)
@@ -60,11 +53,30 @@ class GUI():
         for key in self.cables:
             self.cables[key]['line'], = self.ax.plot([],[],[],color='black',linewidth=0.5,antialiased=False)
             blit_artists.append(self.cables[key]['line'])
+        for key in self.quads:
+            self.quads[key]['l1'], = self.ax.plot([],[],[],color='blue',linewidth=3,antialiased=False)
+            self.quads[key]['l2'], = self.ax.plot([],[],[],color='red',linewidth=3,antialiased=False)
+            self.quads[key]['hub'], = self.ax.plot([],[],[],marker='o',color='green', markersize=6,antialiased=False)
+            blit_artists.append(self.quads[key]['l1'])
+            blit_artists.append(self.quads[key]['l2'])
+            blit_artists.append(self.quads[key]['hub'])
         return tuple(blit_artists)
     
     def update(self, i=0):
         blit_artists = []
         data = self.get_data()
+        for key in self.loads:
+            self.loads[key]['position'] = data[key]['position']
+            self.loads[key]['orientation'] = data[key]['orientation']
+            R = self.rotation_matrix(self.loads[key]['orientation'])
+            points = np.array(self.loads[key]['hardpoints']).T
+            points = np.dot(R,points)
+            points[0,:] += self.loads[key]['position'][0]
+            points[1,:] += self.loads[key]['position'][1]
+            points[2,:] += self.loads[key]['position'][2]
+            for j,line in enumerate(self.loads[key]['lines']):
+                line.set_data_3d(*zip(self.loads[key]['position'], points[:,j]))
+                blit_artists.append(line)
         for key,cable in self.cables.items():
             cable['line'].set_data_3d(*data[key])
             blit_artists.append(cable['line'])
@@ -87,18 +99,6 @@ class GUI():
             blit_artists.append(self.quads[key]['l1'])
             blit_artists.append(self.quads[key]['l2'])
             blit_artists.append(self.quads[key]['hub'])
-        for key in self.loads:
-            self.loads[key]['position'] = data[key]['position']
-            self.loads[key]['orientation'] = data[key]['orientation']
-            R = self.rotation_matrix(self.loads[key]['orientation'])
-            points = np.array(self.loads[key]['hardpoints']).T
-            points = np.dot(R,points)
-            points[0,:] += self.loads[key]['position'][0]
-            points[1,:] += self.loads[key]['position'][1]
-            points[2,:] += self.loads[key]['position'][2]
-            for j,line in enumerate(self.loads[key]['lines']):
-                line.set_data_3d(*zip(self.loads[key]['position'], points[:,j]))
-                blit_artists.append(line)
         return tuple(blit_artists)
     
     def frame_iter(self):
