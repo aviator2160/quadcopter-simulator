@@ -11,26 +11,25 @@ import scipy.integrate
 
 # State space representation: [x y z x_dot y_dot z_dot theta phi gamma theta_dot phi_dot gamma_dot]
 def state_dot(time, state, load):
-    state_t = load.state
     state_dot = np.zeros(12)
     # The velocities(t+1 x_dots equal the t x_dots)
-    state_dot[0] = state_t[3]
-    state_dot[1] = state_t[4]
-    state_dot[2] = state_t[5]
+    state_dot[0] = state[3]
+    state_dot[1] = state[4]
+    state_dot[2] = state[5]
     # The acceleration
     x_dotdot = np.array([0,0,-load.g]) + load.inertial_force/load.mass
     state_dot[3] = x_dotdot[0]
     state_dot[4] = x_dotdot[1]
     state_dot[5] = x_dotdot[2]
     # The angular rates(t+1 theta_dots equal the t theta_dots)
-    state_dot[6] = state_t[9]
-    state_dot[7] = state_t[10]
-    state_dot[8] = state_t[11]
+    state_dot[6] = state[9]
+    state_dot[7] = state[10]
+    state_dot[8] = state[11]
     # The angular accelerations
     # Based on Wikipedia "Moment of inertia"
-    #body_omega = np.dot(load.invR, state_t[9:12])
+    #body_omega = np.dot(load.invR, state[9:12])
     #omega_dot = load.R @ load.invJ @ (load.body_moment - np.cross(body_omega, load.R @ load.J @ body_omega))
-    omega = state_t[9:12]
+    omega = state[9:12]
     omega_dot = np.dot(load.invJ, (load.body_moment - np.cross(omega, np.dot(load.J, omega))))
     state_dot[9] = omega_dot[0]
     state_dot[10] = omega_dot[1]
@@ -38,7 +37,6 @@ def state_dot(time, state, load):
     return state_dot
 
 class Payload():
-    ode = scipy.integrate.ode(state_dot).set_integrator('vode',nsteps=500,method='bdf')
     
     def __init__(self,defs,g=9.81):
         self.g = g
@@ -66,8 +64,8 @@ class Payload():
         body_force_moments = np.dot(self.force_geometry, body_forces.flatten(order='F'))
         self.inertial_force = np.dot(self.R, body_force_moments[0:3])
         self.body_moment = body_force_moments[3:6]
-        Payload.ode.set_initial_value(self.state,0).set_f_params(self)
-        self.state = Payload.ode.integrate(Payload.ode.t + dt)
+        ivp_solution = scipy.integrate.solve_ivp(state_dot,(0,dt),self.state,args=(self,),t_eval=[dt])
+        self.state = ivp_solution.y[:,0]
         self.state[6:9] = util.wrap_angle(self.state[6:9])
 
     def get_position(self):

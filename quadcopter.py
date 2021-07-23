@@ -6,23 +6,22 @@ import scipy.integrate
 # State space representation: [x y z x_dot y_dot z_dot theta phi gamma theta_dot phi_dot gamma_dot]
 # From Quadcopter Dynamics, Simulation, and Control by Andrew Gibiansky
 def state_dot(time, state, quad):
-    state_t = quad.state
     state_dot = np.zeros(12)
     # The velocities(t+1 x_dots equal the t x_dots)
-    state_dot[0] = state_t[3]
-    state_dot[1] = state_t[4]
-    state_dot[2] = state_t[5]
+    state_dot[0] = state[3]
+    state_dot[1] = state[4]
+    state_dot[2] = state[5]
     # The acceleration
-    x_dotdot = np.array([0,0,-quad.g]) + quad.external_force/quad.mass + np.dot(util.rotation_matrix(state_t[6:9]),np.array([0,0,(quad.m1.thrust + quad.m2.thrust + quad.m3.thrust + quad.m4.thrust)]))/quad.mass
+    x_dotdot = np.array([0,0,-quad.g]) + quad.external_force/quad.mass + np.dot(util.rotation_matrix(state[6:9]),np.array([0,0,(quad.m1.thrust + quad.m2.thrust + quad.m3.thrust + quad.m4.thrust)]))/quad.mass
     state_dot[3] = x_dotdot[0]
     state_dot[4] = x_dotdot[1]
     state_dot[5] = x_dotdot[2]
     # The angular rates(t+1 theta_dots equal the t theta_dots)
-    state_dot[6] = state_t[9]
-    state_dot[7] = state_t[10]
-    state_dot[8] = state_t[11]
+    state_dot[6] = state[9]
+    state_dot[7] = state[10]
+    state_dot[8] = state[11]
     # The angular accelerations
-    omega = state_t[9:12]
+    omega = state[9:12]
     tau = np.array([quad.L * (quad.m1.thrust - quad.m3.thrust), quad.L * (quad.m2.thrust - quad.m4.thrust), quad.b * (quad.m1.thrust - quad.m2.thrust + quad.m3.thrust - quad.m4.thrust)])
     omega_dot = np.dot(quad.invJ, (tau - np.cross(omega, np.dot(quad.J, omega))))
     state_dot[9] = omega_dot[0]
@@ -47,9 +46,6 @@ class Propeller():
             self.thrust = self.thrust*0.101972
 
 class Quadcopter():
-    ode = scipy.integrate.ode(state_dot).set_integrator('vode',nsteps=500,method='bdf')
-    run = True
-    num_updates = 0
     
     def __init__(self,defs,g=9.81,b=0.0245):
         self.g = g
@@ -73,8 +69,8 @@ class Quadcopter():
         self.invJ = np.linalg.inv(self.J)
     
     def update(self,dt):
-        Quadcopter.ode.set_initial_value(self.state,0).set_f_params(self)
-        self.state = Quadcopter.ode.integrate(Quadcopter.ode.t + dt)
+        ivp_solution = scipy.integrate.solve_ivp(state_dot,(0,dt),self.state,args=(self,),t_eval=[dt])
+        self.state = ivp_solution.y[:,0]
         self.state[6:9] = util.wrap_angle(self.state[6:9])
 
     def set_motor_speeds(self,speeds):
