@@ -22,7 +22,7 @@ def state_dot(time, state, quad):
     state_dot[8] = state[11]
     # The angular accelerations
     omega = state[9:12]
-    tau = np.array([quad.L * (quad.m1.thrust - quad.m3.thrust), quad.L * (quad.m2.thrust - quad.m4.thrust), quad.b * (quad.m1.thrust - quad.m2.thrust + quad.m3.thrust - quad.m4.thrust)])
+    tau = np.array([quad.L * (quad.m1.thrust - quad.m3.thrust), quad.L * (quad.m2.thrust - quad.m4.thrust), quad.prop_torque_coeff * (quad.m1.thrust - quad.m2.thrust + quad.m3.thrust - quad.m4.thrust)])
     omega_dot = np.dot(quad.invJ, (tau - np.cross(omega, np.dot(quad.J, omega))))
     state_dot[9] = omega_dot[0]
     state_dot[10] = omega_dot[1]
@@ -34,7 +34,7 @@ class Propeller():
         self.dia = prop_dia
         self.pitch = prop_pitch
         self.thrust_unit = thrust_unit
-        self.speed = 0 #RPM
+        self.speed = 0 # RPM
         self.thrust = 0
 
     def set_speed(self,speed):
@@ -47,15 +47,15 @@ class Propeller():
 
 class Quadcopter():
     
-    def __init__(self,defs,g=9.81,b=0.0245):
+    def __init__(self,defs,g=9.81):
         self.g = g
-        self.b = b
         self.state = np.zeros(12)
         self.state[0:3] = defs['position']
         self.state[6:9] = defs['orientation']
         self.L = defs['L']
         self.r = defs['r']
         self.mass = defs['mass']
+        self.prop_torque_coeff = defs['prop_torque_coeff']
         self.m1 = Propeller(defs['prop_size'][0],defs['prop_size'][1])
         self.m2 = Propeller(defs['prop_size'][0],defs['prop_size'][1])
         self.m3 = Propeller(defs['prop_size'][0],defs['prop_size'][1])

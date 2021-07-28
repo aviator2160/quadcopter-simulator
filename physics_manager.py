@@ -20,7 +20,7 @@ class PhysicsManager():
     types of physics object.
     """
     
-    def __init__(self, QUAD_DEFS, CTRL_DEFS, LOAD_DEFS=None, CABLE_DEFS=None):
+    def __init__(self,QUAD_DEFS,LOAD_DEFS,CABLE_DEFS,CTRL_DEFS):
         self.WAIT_WAKE_RATE = 0.02
         self.TIME_SCALING_EPSILON = 0.01
         self.quads = {}

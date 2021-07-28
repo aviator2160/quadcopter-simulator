@@ -7,7 +7,7 @@ import sys
 
 class GUI():
     # 'quad_list' is a dictionary of format: quad_list = {'quad_1_name':{'position':quad_1_position,'orientation':quad_1_orientation,'arm_span':quad_1_arm_span}, ...}
-    def __init__(self, QUAD_DEFS, LOAD_DEFS, CABLE_DEFS, get_data, get_time):
+    def __init__(self,QUAD_DEFS,LOAD_DEFS,CABLE_DEFS,get_data,get_time):
         self.quads = QUAD_DEFS
         self.loads = LOAD_DEFS
         self.cables = CABLE_DEFS
