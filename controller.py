@@ -4,8 +4,6 @@ def new_controller(identifier, params, get_state, get_time, actuate):
     # identifier is currently used ONLY for printing goals
     if params['Type'] == 'pid_p2p':
         return Controller_PID_Point2Point(identifier, params, get_state, get_time, actuate)
-    elif params['Type'] == 'pid_velocity':
-        return Controller_PID_Velocity(identifier, params, get_state, get_time, actuate)
     else:
         raise ControllerTypeNotFoundError(str(params['Type']) + " is not a recognized type of controller!")
 

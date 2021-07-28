@@ -9,31 +9,25 @@ import util
 import numpy as np
 import scipy.integrate
 
+POS = slice(0,3)
+VEL = slice(3,6)
+EUL = slice(6,9)
+OMG = slice(9,12)
+
 # State space representation: [x y z x_dot y_dot z_dot theta phi gamma theta_dot phi_dot gamma_dot]
 def state_dot(time, state, load):
     state_dot = np.zeros(12)
     # The velocities(t+1 x_dots equal the t x_dots)
-    state_dot[0] = state[3]
-    state_dot[1] = state[4]
-    state_dot[2] = state[5]
+    state_dot[POS] = state[VEL]
     # The acceleration
     x_dotdot = np.array([0,0,-load.g]) + load.inertial_force/load.mass
-    state_dot[3] = x_dotdot[0]
-    state_dot[4] = x_dotdot[1]
-    state_dot[5] = x_dotdot[2]
+    state_dot[VEL] = x_dotdot
     # The angular rates(t+1 theta_dots equal the t theta_dots)
-    state_dot[6] = state[9]
-    state_dot[7] = state[10]
-    state_dot[8] = state[11]
+    state_dot[EUL] = state[OMG]
     # The angular accelerations
-    # Based on Wikipedia "Moment of inertia"
-    #body_omega = np.dot(load.invR, state[9:12])
-    #omega_dot = load.R @ load.invJ @ (load.body_moment - np.cross(body_omega, load.R @ load.J @ body_omega))
-    omega = state[9:12]
+    omega = state[OMG]
     omega_dot = np.dot(load.invJ, (load.body_moment - np.cross(omega, np.dot(load.J, omega))))
-    state_dot[9] = omega_dot[0]
-    state_dot[10] = omega_dot[1]
-    state_dot[11] = omega_dot[2]
+    state_dot[OMG] = omega_dot
     return state_dot
 
 class Payload():
@@ -41,8 +35,8 @@ class Payload():
     def __init__(self,defs,g=9.81):
         self.g = g
         self.state = np.zeros(12)
-        self.state[0:3] = defs['position']
-        self.state[6:9] = defs['orientation']
+        self.state[POS] = defs['position']
+        self.state[EUL] = defs['orientation']
         self.x = defs['x']
         self.y = defs['y']
         self.z = defs['z']
@@ -58,7 +52,7 @@ class Payload():
         self.invJ = np.linalg.inv(self.J)
         
     def update(self, dt):
-        self.R = util.rotation_matrix(self.state[6:9])
+        self.R = util.rotation_matrix(self.state[EUL])
         self.invR = self.R.transpose()
         body_forces = np.dot(self.invR, self.applied_forces)
         body_force_moments = np.dot(self.force_geometry, body_forces.flatten(order='F'))
@@ -66,32 +60,32 @@ class Payload():
         self.body_moment = body_force_moments[3:6]
         ivp_solution = scipy.integrate.solve_ivp(state_dot,(0,dt),self.state,args=(self,),t_eval=[dt])
         self.state = ivp_solution.y[:,0]
-        self.state[6:9] = util.wrap_angle(self.state[6:9])
+        self.state[EUL] = util.wrap_angle(self.state[EUL])
 
     def get_position(self):
-        return self.state[0:3]
+        return self.state[POS]
 
     def get_linear_rate(self):
-        return self.state[3:6]
+        return self.state[VEL]
 
     def get_orientation(self):
-        return self.state[6:9]
+        return self.state[EUL]
 
     def get_angular_rate(self):
-        return self.state[9:12]
+        return self.state[OMG]
 
     def get_state(self):
         return self.state
 
     def set_position(self,position):
-        self.state[0:3] = position
+        self.state[POS] = position
 
     def set_orientation(self,orientation):
-        self.state[6:9] = orientation
+        self.state[EUL] = orientation
         
     def set_force_at(self,hardpoint_num,force):
         self.applied_forces[:,hardpoint_num] = force
     
     def get_hardpoint(self,hardpoint_num):
-        R = util.rotation_matrix(self.state[6:9])
-        return self.state[0:3] + np.dot(R,self.hardpoints[:,hardpoint_num])
+        R = util.rotation_matrix(self.state[EUL])
+        return self.state[POS] + np.dot(R,self.hardpoints[:,hardpoint_num])
