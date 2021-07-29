@@ -1,18 +1,26 @@
-import numpy as np
+import util
 
-def new_controller(identifier, params, get_state, get_time, actuate):
+import numpy as np
+import cvxpy as cvx
+import scipy.linalg as sla
+
+POS = slice(0,3)
+VEL = slice(3,6)
+EUL = slice(6,9)
+OMG = slice(9,12)
+
+def new_controller(get_time, quad, params, identifier):
     # identifier is currently used ONLY for printing goals
-    if params['Type'] == 'pid_p2p':
-        return Controller_PID_Point2Point(identifier, params, get_state, get_time, actuate)
-    else:
-        raise ControllerTypeNotFoundError(str(params['Type']) + " is not a recognized type of controller!")
+    Controller = controllers.get(params['Type'])
+    if Controller != None:
+        return Controller(get_time, quad, params, identifier)
+    raise ControllerTypeNotFoundError(str(params['Type']) + " is not a recognized type of controller!")
 
 class Controller_PID_Point2Point():
-    def __init__(self, identifier, params, get_state, get_time, actuate):
-        self.identifier = identifier
-        self.actuate_motors = actuate
-        self.get_state = get_state
+    def __init__(self, get_time, quad, params, identifier):
         self.get_time = get_time
+        self.quad = quad
+        self.id = identifier
         self.goals = params['Goals']
         self.curr_goal = {'time': 0, 'position': (0,0,0), 'yaw': 0}
         self.MOTOR_LIMITS = params['Motor_limits']
@@ -33,17 +41,12 @@ class Controller_PID_Point2Point():
         self.thetai_term = 0
         self.phii_term = 0
         self.gammai_term = 0
-        self.thread_object = None
-        self.run = True
-
-    def wrap_angle(self,val):
-        return( ( val + np.pi) % (2 * np.pi ) - np.pi )
 
     def update(self, dt):
         if (len(self.goals) > 0) and (self.get_time() > self.goals[0]['time']):
             self.update_goal(self.goals.pop(0))
         [dest_x,dest_y,dest_z] = self.curr_goal['position']
-        [x,y,z,x_dot,y_dot,z_dot,theta,phi,gamma,theta_dot,phi_dot,gamma_dot] = self.get_state()
+        [x,y,z,x_dot,y_dot,z_dot,theta,phi,gamma,theta_dot,phi_dot,gamma_dot] = self.quad.get_state()
         x_error = dest_x-x
         y_error = dest_y-y
         z_error = dest_z-z
@@ -60,7 +63,7 @@ class Controller_PID_Point2Point():
         dest_theta,dest_phi = np.clip(dest_theta,self.TILT_LIMITS[0],self.TILT_LIMITS[1]),np.clip(dest_phi,self.TILT_LIMITS[0],self.TILT_LIMITS[1])
         theta_error = dest_theta-theta
         phi_error = dest_phi-phi
-        gamma_dot_error = (self.YAW_RATE_SCALER*self.wrap_angle(dest_gamma-gamma)) - gamma_dot
+        gamma_dot_error = (self.YAW_RATE_SCALER*util.wrap_angle(dest_gamma-gamma)) - gamma_dot
         self.thetai_term += self.ANGULAR_I[0]*theta_error
         self.phii_term += self.ANGULAR_I[1]*phi_error
         self.gammai_term += self.ANGULAR_I[2]*gamma_dot_error
@@ -73,16 +76,61 @@ class Controller_PID_Point2Point():
         m3 = throttle - x_val + z_val
         m4 = throttle - y_val - z_val
         M = np.clip([m1,m2,m3,m4],self.MOTOR_LIMITS[0],self.MOTOR_LIMITS[1])
-        self.actuate_motors(M)
+        self.quad.actuate(M)
 
     def update_goal(self,new_goal):
         # new_goal might not contain all possible goals
         for key in new_goal:
             self.curr_goal[key] = new_goal[key]
-        print(self.identifier + " goal: " + str(self.curr_goal))
+        print(self.id + " goal: " + str(self.curr_goal))
 
     def update_yaw_target(self,target):
-        self.yaw_target = self.wrap_angle(target)
+        self.yaw_target = util.wrap_angle(target)
+
+"""
+Based on https://github.com/lisarah/geometric/blob/master/lti.py
+
+Linear time-varying LQR controller
+"""
+class Controller_LQR_Point2Point():
+    def __init__(self, get_time, quad, params, identifier):
+        self.get_time = get_time
+        self.quad = quad
+        self.id = identifier
+        self.goals = params['Goals']
+        self.curr_goal = {'time': 0, 'position': (0,0,0), 'yaw': 0}
+        self.MOTOR_LIMITS = params['Motor_limits']
+        self.TILT_LIMITS = [(params['Tilt_limits'][0]/180.0)*3.14,(params['Tilt_limits'][1]/180.0)*3.14]
+        self.YAW_CONTROL_LIMITS = params['Yaw_Control_Limits']
+        self.Q = params['Q']
+        self.R = params['R']
+        self.quad.get_ltv_system()
+    
+    def update(self, dt):
+        if (len(self.goals) > 0) and (self.get_time() > self.goals[0]['time']):
+            self.update_goal(self.goals.pop(0))
+        state = np.zeros(12)
+        state = self.quad.get_state().copy()
+        state[POS] -= self.curr_goal['position']
+        state[EUL][2] -= self.curr_goal['yaw']
+        A,B = self.quad.get_ltv_system()
+        P = sla.solve_continuous_are(A,B,self.Q,self.R)
+        K = -sla.inv(self.R).dot(B.T).dot(P)
+        print(K)
+        u = np.dot(K, state)
+        u = np.clip(u,self.MOTOR_LIMITS[0],self.MOTOR_LIMITS[1])
+        self.quad.actuate(u)
+
+    def update_goal(self,new_goal):
+        # new_goal might not contain all possible goals
+        for key in new_goal:
+            self.curr_goal[key] = new_goal[key]
+        print(self.id + " goal: " + str(self.curr_goal))
+
+controllers = {
+    'pid_p2p': Controller_PID_Point2Point,
+    'lqr_p2p': Controller_LQR_Point2Point,
+    }
 
 class ControllerTypeNotFoundError(Exception):
     pass

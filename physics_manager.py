@@ -28,7 +28,7 @@ class PhysicsManager():
             self.quads[key] = Quadcopter(QUAD_DEFS[key])
         self.ctrls = {}
         for key in CTRL_DEFS:
-            self.ctrls[key] = controller.new_controller(identifier=key, params=CTRL_DEFS[key], get_state=self.quads[key].get_state, get_time=self.get_time, actuate=self.quads[key].set_motor_speeds)
+            self.ctrls[key] = controller.new_controller(get_time=self.get_time,quad=self.quads[key],params=CTRL_DEFS[key],identifier=key)
         self.loads = {}
         for key in LOAD_DEFS:
             self.loads[key] = Payload(LOAD_DEFS[key])
@@ -79,10 +79,6 @@ class PhysicsManager():
         self.time_paused = 0
         self.phys_thread = threading.Thread(target=self.check_thread_update,args=(phys_dt,self.phys_update,phys_dt))
         self.phys_thread.start()
-        self.ctrl_threads = {}
-        for key,ctrl in self.ctrls.items():
-            self.ctrl_threads[key] = threading.Thread(target=self.check_thread_update,args=(ctrl_dt,ctrl.update))
-            #self.ctrl_threads[key].start()
     
     def check_thread_update(self, dt, update, args=None):
         update_num = 0
@@ -92,9 +88,7 @@ class PhysicsManager():
             if curr_time > update_num * dt:
                 update(args)
                 update_num += 1
-        # super hacky way to check for just physics updates
-        if (args != None):
-            print(update_num)
+        print(update_num)
     
     def stop_threads(self):
         self.run = False

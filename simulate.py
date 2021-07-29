@@ -13,9 +13,9 @@ import signal
 import argparse
 
 # Constants
-DEFAULT_SIM = 'slung_p2p'
+DEFAULT_SIM = 'single_lqr_p2p'
 HEADLESS = False
-TIME_SCALING = 1.0 # Any positive number(Smaller is faster). 1.0->Real Time, 0.0->Run as fast as possible
+TIME_SCALING = 10.0 # Any positive number(Smaller is faster). 1.0->Real Time, 0.0->Run as fast as possible
 PHYSICAL_DYNAMICS_UPDATE = 0.01 # seconds
 CONTROLLER_DYNAMICS_UPDATE = 0.05 # seconds
 run = True
@@ -56,11 +56,17 @@ def check_quit():
     global run
     return not run
 
+class SimTypeNotFoundError(Exception):
+    pass
+
 if __name__ == "__main__":
     args = parse_args()
     if args.headless: HEADLESS = True
     if args.time_scale >= 0: TIME_SCALING = args.time_scale
     if args.quad_update_time > 0: QUAD_DYNAMICS_UPDATE = args.quad_update_time
     if args.controller_update_time > 0: CONTROLLER_DYNAMICS_UPDATE = args.controller_update_time
-    sim = sims.defs[args.sim]
-    run_sim(sim)
+    sim_def = sims.defs.get(args.sim)
+    if sim_def == None:
+        raise SimTypeNotFoundError(str(args.sim) + " is not a recognized simulation name!")
+    run_sim(sim_def)
+        

@@ -25,7 +25,7 @@ def state_dot(time, state, quad):
     omega_dot = np.dot(quad.invJ, (tau - np.cross(omega, np.dot(quad.J, omega))))
     state_dot[OMG] = omega_dot
     return state_dot
-
+    
 class Propeller():
     def __init__(self, prop_dia, prop_pitch, thrust_unit='N'):
         self.dia = prop_dia
@@ -70,11 +70,11 @@ class Quadcopter():
         self.state = ivp_solution.y[:,0]
         self.state[EUL] = util.wrap_angle(self.state[EUL])
 
-    def set_motor_speeds(self,speeds):
-        self.m1.set_speed(speeds[0])
-        self.m2.set_speed(speeds[1])
-        self.m3.set_speed(speeds[2])
-        self.m4.set_speed(speeds[3])
+    def actuate(self,vals):
+        self.m1.set_speed(vals[0])
+        self.m2.set_speed(vals[1])
+        self.m3.set_speed(vals[2])
+        self.m4.set_speed(vals[3])
 
     def get_position(self):
         return self.state[POS]
@@ -102,3 +102,19 @@ class Quadcopter():
     
     def set_external_force(self,force):
         self.external_force = force
+    
+    def get_ltv_system(self):
+        # Linearization of state_dot, returnig A and B from Ax = B
+        n = 12 # number of independent dynamic variables per rotorcraft
+        m = 4 # number of independent input variables per rotorcraft
+        A = np.zeros((n,n))
+        B = np.zeros((n,m))
+        A[POS,VEL] = np.eye(3) # position <- velocity
+        A[EUL,OMG] = np.eye(3) # orientation <- angular velocity
+        sum_thrusts = np.concatenate([np.zeros((2,m)), np.ones((1,m))], axis=0)
+        L = self.L
+        b = self.prop_torque_coeff
+        sum_moments =  np.array([[L,0,-L,0],[0,L,0,-L],[b,-b,b,-b]])
+        B[VEL,:] = np.dot(util.rotation_matrix(self.state[EUL]),sum_thrusts) / self.mass
+        B[OMG,:] = np.dot(self.invJ, sum_moments)
+        return A,B

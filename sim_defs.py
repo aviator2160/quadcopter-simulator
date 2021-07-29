@@ -4,7 +4,9 @@ Definitions of all simulators
 @author: Avi Mittal
 """
 
-Slung_P2P = {
+import numpy as np
+
+Slung_PID_P2P = {
     'SIM_DURATION': 10, # simulated seconds
     # Define the quadcopters
     'QUADCOPTER_DEFS':{
@@ -44,7 +46,36 @@ Slung_P2P = {
         },
     }
 
-Single_P2P = {
+Single_LQR_P2P = {
+    'SIM_DURATION': 32, # simulated seconds
+    # Define the quadcopters
+    'QUADCOPTER_DEFS':{
+        'q1':{
+            'position':[1,0,4],'orientation':[0,0,0],
+            'L': 0.3,'r': 0.1,'mass': 1.2,
+            'prop_size':[10,4.5],'prop_torque_coeff': 0.0245
+            },
+        },
+    # Controller parameters
+    'CONTROLLER_DEFS':{
+        'q1':{
+            'Type':'lqr_p2p',
+            'Goals':[
+                {'time': 0,  'position': ( 1, 1,2), 'yaw': 0},
+                {'time': 8,  'position': ( 1,-1,4), 'yaw': 3.14},
+                {'time': 16, 'position': (-1,-1,2), 'yaw': -1.54},
+                {'time': 24, 'position': (-1, 1,4), 'yaw': 1.54}
+                ],
+            'Motor_limits':[3000,9000],
+            'Tilt_limits':[-10,10],
+            'Yaw_Control_Limits':[-900,900],
+            'Q': np.diag([0,0,0, 0,0,1, 0,0,0, 1,1,0]),
+            'R': np.eye(4)
+            },
+        },
+    }
+
+Single_PID_P2P = {
     'SIM_DURATION': 32, # simulated seconds
     # Define the quadcopters
     'QUADCOPTER_DEFS':{
@@ -76,7 +107,7 @@ Single_P2P = {
         },
     }
 
-Multi_P2P = {
+Multi_PID_P2P = {
     'SIM_DURATION': 16, # simulated seconds
     # Define the quadcopters
     'QUADCOPTER_DEFS':{
@@ -127,7 +158,9 @@ Multi_P2P = {
     }
 
 defs = {
-    'slung_p2p':  Slung_P2P,
-    'single_p2p': Single_P2P,
-    'multi_p2p':  Multi_P2P,
+    # 'slung_lqr_p2p':  Slung_LQR_P2P,
+    'slung_pid_p2p':  Slung_PID_P2P,
+    'single_lqr_p2p': Single_LQR_P2P,
+    'single_pid_p2p': Single_PID_P2P,
+    'multi_pid_p2p':  Multi_PID_P2P,
     }
