@@ -1,5 +1,6 @@
+import util
+
 import numpy as np
-import math
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as Axes3D
 import matplotlib.animation as animation
@@ -26,20 +27,7 @@ class GUI():
         self.init_plot()
         self.fig.canvas.mpl_connect('key_press_event', self.key_press_routine)
         self.fig.canvas.mpl_connect('close_event', self.close_routine)
-
-    def rotation_matrix(self,angles):
-        ct = math.cos(angles[0])
-        cp = math.cos(angles[1])
-        cg = math.cos(angles[2])
-        st = math.sin(angles[0])
-        sp = math.sin(angles[1])
-        sg = math.sin(angles[2])
-        R_x = np.array([[1,0,0],[0,ct,-st],[0,st,ct]])
-        R_y = np.array([[cp,0,sp],[0,1,0],[-sp,0,cp]])
-        R_z = np.array([[cg,-sg,0],[sg,cg,0],[0,0,1]])
-        R = np.dot(R_z, np.dot( R_y, R_x ))
-        return R
-
+        
     def init_plot(self):
         blit_artists = []
         for key in self.loads:
@@ -68,7 +56,7 @@ class GUI():
         for key in self.loads:
             self.loads[key]['position'] = data[key]['position']
             self.loads[key]['orientation'] = data[key]['orientation']
-            R = self.rotation_matrix(self.loads[key]['orientation'])
+            R = util.rotation_matrix(self.loads[key]['orientation'])
             points = np.array(self.loads[key]['hardpoints']).T
             points = np.dot(R,points)
             points[0,:] += self.loads[key]['position'][0]
@@ -83,7 +71,7 @@ class GUI():
         for key in self.quads:
             self.quads[key]['position'] = data[key]['position']
             self.quads[key]['orientation'] = data[key]['orientation']
-            R = self.rotation_matrix(self.quads[key]['orientation'])
+            R = util.rotation_matrix(self.quads[key]['orientation'])
             L = self.quads[key]['L']
             points = np.array([ [-L,0,0], [L,0,0], [0,-L,0], [0,L,0], [0,0,0], [0,0,0] ]).T
             points = np.dot(R,points)
