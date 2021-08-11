@@ -26,6 +26,10 @@ def state_dot(time, state, load):
     state_dot[EUL] = state[OMG]
     # The angular accelerations
     omega = state[OMG]
+    # R = util.rotation_matrix(state[EUL])
+    # J = R @ load.J @ R.T
+    # invJ = R @ load.invJ @ R.T
+    # omega_dot = np.dot(invJ, (R @ load.body_moment - np.cross(omega, np.dot(J, omega))))
     omega_dot = np.dot(load.invJ, (load.body_moment - np.cross(omega, np.dot(load.J, omega))))
     state_dot[OMG] = omega_dot
     return state_dot

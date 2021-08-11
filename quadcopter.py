@@ -12,35 +12,23 @@ OMG = slice(9,12)
 # From Quadcopter Dynamics, Simulation, and Control by Andrew Gibiansky
 def state_dot(time, state, quad):
     state_dot = np.zeros(12)
+    R = util.rotation_matrix(state[EUL])
     # The velocities(t+1 x_dots equal the t x_dots)
     state_dot[POS] = state[VEL]
     # The acceleration
-    x_dotdot = np.array([0,0,-quad.g]) + quad.external_force/quad.mass + np.dot(util.rotation_matrix(state[EUL]),np.array([0,0,(quad.m1.thrust + quad.m2.thrust + quad.m3.thrust + quad.m4.thrust)]))/quad.mass
+    x_dotdot = np.array([0,0,-quad.g]) + quad.external_force/quad.mass + np.dot(R,np.array([0,0,np.sum(quad.thrusts)]))/quad.mass
     state_dot[VEL] = x_dotdot
     # The angular rates(t+1 theta_dots equal the t theta_dots)
     state_dot[EUL] = state[OMG]
     # The angular accelerations
     omega = state[OMG]
-    tau = np.array([quad.L * (quad.m1.thrust - quad.m3.thrust), quad.L * (quad.m2.thrust - quad.m4.thrust), quad.prop_torque_coeff * (quad.m1.thrust - quad.m2.thrust + quad.m3.thrust - quad.m4.thrust)])
+    tau = np.array([quad.L * (quad.thrusts[1] - quad.thrusts[3]), quad.L * (quad.thrusts[0] - quad.thrusts[2]), quad.b * (quad.thrusts[0] - quad.thrusts[1] + quad.thrusts[2] - quad.thrusts[3])])
+    # J = R @ quad.J @ R.T
+    # invJ = R @ quad.invJ @ R.T
+    # omega_dot = np.dot(invJ, (R @ tau - np.cross(omega, np.dot(J, omega))))
     omega_dot = np.dot(quad.invJ, (tau - np.cross(omega, np.dot(quad.J, omega))))
     state_dot[OMG] = omega_dot
     return state_dot
-    
-class Propeller():
-    def __init__(self, prop_dia, prop_pitch, thrust_unit='N'):
-        self.dia = prop_dia
-        self.pitch = prop_pitch
-        self.thrust_unit = thrust_unit
-        self.speed = 0 # RPM
-        self.thrust = 0
-
-    def set_speed(self,speed):
-        self.speed = speed
-        # From http://www.electricrcaircraftguy.com/2013/09/propeller-static-dynamic-thrust-equation.html
-        self.thrust = 4.392e-8 * self.speed * np.power(self.dia,3.5)/(np.sqrt(self.pitch))
-        self.thrust = self.thrust*(4.23e-4 * self.speed * self.pitch)
-        if self.thrust_unit == 'Kg':
-            self.thrust = self.thrust*0.101972
 
 class Quadcopter():
     
@@ -52,11 +40,12 @@ class Quadcopter():
         self.L = defs['L']
         self.r = defs['r']
         self.mass = defs['mass']
-        self.prop_torque_coeff = defs['prop_torque_coeff']
-        self.m1 = Propeller(defs['prop_size'][0],defs['prop_size'][1])
-        self.m2 = Propeller(defs['prop_size'][0],defs['prop_size'][1])
-        self.m3 = Propeller(defs['prop_size'][0],defs['prop_size'][1])
-        self.m4 = Propeller(defs['prop_size'][0],defs['prop_size'][1])
+        self.b = defs['prop_torque_coeff']
+        # From http://www.electricrcaircraftguy.com/2013/09/propeller-static-dynamic-thrust-equation.html
+        dia = defs['prop_size'][0]
+        pitch = defs['prop_size'][1]
+        self.prop_thrust_const = 4.392e-8 * np.power(dia,3.5) / (np.sqrt(pitch)) * 4.23e-4 * pitch
+        self.thrusts = np.zeros(4)
         self.external_force = np.zeros(3)
         # From Quadrotor Dynamics and Control by Randal Beard
         ixx = ((2*self.mass*self.r**2)/5)+(2*self.mass*self.L**2)
@@ -70,11 +59,12 @@ class Quadcopter():
         self.state = ivp_solution.y[:,0]
         self.state[EUL] = util.wrap_angle(self.state[EUL])
 
-    def actuate(self,vals):
-        self.m1.set_speed(vals[0])
-        self.m2.set_speed(vals[1])
-        self.m3.set_speed(vals[2])
-        self.m4.set_speed(vals[3])
+    # @todo: add dependence of thrust on airspeed
+    def set_speeds(self,vals):
+        self.thrusts = self.prop_thrust_const * np.square(vals)
+    
+    def set_thrusts(self,vals):
+        self.thrusts = vals
 
     def get_position(self):
         return self.state[POS]
@@ -107,14 +97,16 @@ class Quadcopter():
         # Linearization of state_dot, returnig A and B from Ax = B
         n = 12 # number of independent dynamic variables per rotorcraft
         m = 4 # number of independent input variables per rotorcraft
+        # A matrix
         A = np.zeros((n,n))
-        B = np.zeros((n,m))
         A[POS,VEL] = np.eye(3) # position <- velocity
         A[EUL,OMG] = np.eye(3) # orientation <- angular velocity
-        sum_thrusts = np.concatenate([np.zeros((2,m)), np.ones((1,m))], axis=0)
-        L = self.L
-        b = self.prop_torque_coeff
-        sum_moments =  np.array([[L,0,-L,0],[0,L,0,-L],[b,-b,b,-b]])
-        B[VEL,:] = np.dot(util.rotation_matrix(self.state[EUL]),sum_thrusts) / self.mass
-        B[OMG,:] = np.dot(self.invJ, sum_moments)
+        A[VEL,EUL] = -1/self.mass * util.cross_matrix(np.array([0,0,np.sum(self.thrusts)])) # right-crossed with change in angle
+        omega = self.state[OMG]
+        A[OMG,OMG] = self.invJ @ (util.cross_matrix(self.J @ omega) - util.cross_matrix(omega) @ self.J)
+        # B matrix
+        B = np.zeros((n,m))
+        R = util.rotation_matrix(self.state[EUL])
+        B[VEL,0] = 1/self.mass * R[:,2]
+        B[OMG,1:4] = self.invJ
         return A,B
