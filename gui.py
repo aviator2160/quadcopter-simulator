@@ -6,6 +6,8 @@ import mpl_toolkits.mplot3d.axes3d as Axes3D
 import matplotlib.animation as animation
 import sys
 
+PAUSE_ON_START = False
+
 class GUI():
     # 'quad_list' is a dictionary of format: quad_list = {'quad_1_name':{'position':quad_1_position,'orientation':quad_1_orientation,'arm_span':quad_1_arm_span}, ...}
     def __init__(self,QUAD_DEFS,LOAD_DEFS,CABLE_DEFS,get_data,get_time):
@@ -103,6 +105,8 @@ class GUI():
         self.anim = animation.FuncAnimation(self.fig, self.update, init_func=self.init_plot,
                                        frames=self.frame_iter, interval=1000*frame_delta,
                                        blit=True)
+        if PAUSE_ON_START:
+            self.toggle_pause()
         while self.run == True:
             plt.pause(frame_delta)
         self.init_plot()

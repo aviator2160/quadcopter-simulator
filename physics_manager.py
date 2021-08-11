@@ -77,11 +77,13 @@ class PhysicsManager():
         self.start = datetime.datetime.now()
         self.pause_start = self.start
         self.time_paused = 0
-        self.phys_thread = threading.Thread(target=self.check_thread_update,args=(phys_dt,self.phys_update,phys_dt))
+        self.phys_thread = threading.Thread(target=self.run_thread,args=(phys_dt,self.phys_update,phys_dt))
+        #self.ctrls['q1'].update(phys_dt)
         self.phys_thread.start()
     
-    def check_thread_update(self, dt, update, args=None):
+    def run_thread(self, dt, update, args=None):
         update_num = 0
+        time.sleep(self.WAIT_WAKE_RATE)
         while(self.run==True):
             time.sleep(0)
             curr_time = self.get_time()

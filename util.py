@@ -21,6 +21,20 @@ def rotation_matrix(angles):
     R = np.dot(R_z, np.dot( R_y, R_x ))
     return R
 
+"""
+Given an input 3-vector A, returns the 3x3 matrix such that left-multiplying
+any other 3-vector B by it is equivalent to taking the cross product A x B.
+"""
+def cross_matrix(vector):
+    cross = np.zeros([3,3])
+    cross[0,1] = -vector[2] # -vector_z
+    cross[0,2] =  vector[1] #  vector_y
+    cross[1,0] =  vector[2] #  vector_z
+    cross[1,2] = -vector[0] # -vector_x
+    cross[2,0] = -vector[1] # -vector_y
+    cross[2,1] =  vector[0] #  vector_x
+    return cross
+
 def wrap_angle(angle):
     return((angle + np.pi) % (2 * np.pi ) - np.pi)
 
@@ -36,13 +50,8 @@ def force_geometry(moment_arms):
     for j in range(moment_arms.shape[1]):
         arm = moment_arms[:,j]
         fm_i = np.zeros((6, 3))
-        fm_i[0:3, 0:3] = np.eye(3)
-        fm_i[3,1] = -arm[2] # -arm_z
-        fm_i[3,2] =  arm[1] #  arm_y
-        fm_i[4,0] =  arm[2] #  arm_z
-        fm_i[4,2] = -arm[0] # -arm_x
-        fm_i[5,0] = -arm[1] # -arm_y
-        fm_i[5,1] =  arm[0] #  arm_x
+        fm_i[0:3,:] = np.eye(3)
+        fm_i[3:6,:] = cross_matrix(arm)
         force_geometry_list.append(fm_i)
     return np.concatenate(force_geometry_list, axis=1)
     
