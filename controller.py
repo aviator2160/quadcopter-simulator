@@ -63,7 +63,7 @@ class Controller_PID_Point2Point():
         dest_theta,dest_phi = np.clip(dest_theta,self.TILT_LIMITS[0],self.TILT_LIMITS[1]),np.clip(dest_phi,self.TILT_LIMITS[0],self.TILT_LIMITS[1])
         theta_error = dest_theta-theta
         phi_error = dest_phi-phi
-        gamma_dot_error = (self.YAW_RATE_SCALER*util.wrap_angle(dest_gamma-gamma)) - gamma_dot
+        gamma_dot_error = dest_gamma-gamma #(self.YAW_RATE_SCALER*util.wrap_angle(dest_gamma-gamma)) - gamma_dot
         self.thetai_term += self.ANGULAR_I[0]*theta_error
         self.phii_term += self.ANGULAR_I[1]*phi_error
         self.gammai_term += self.ANGULAR_I[2]*gamma_dot_error
@@ -71,12 +71,12 @@ class Controller_PID_Point2Point():
         y_val = self.ANGULAR_P[1]*(phi_error) + self.ANGULAR_D[1]*(-phi_dot) + self.phii_term
         z_val = self.ANGULAR_P[2]*(gamma_dot_error) + self.gammai_term
         z_val = np.clip(z_val,self.YAW_CONTROL_LIMITS[0],self.YAW_CONTROL_LIMITS[1])
-        m1 = throttle + x_val + z_val
-        m2 = throttle + y_val - z_val
-        m3 = throttle - x_val + z_val
-        m4 = throttle - y_val - z_val
+        m1 = throttle + y_val + z_val
+        m2 = throttle + x_val - z_val
+        m3 = throttle - y_val + z_val
+        m4 = throttle - x_val - z_val
         M = np.clip([m1,m2,m3,m4],self.MOTOR_LIMITS[0],self.MOTOR_LIMITS[1])
-        self.quad.actuate(M)
+        self.quad.set_speeds(M)
 
     def update_goal(self,new_goal):
         # new_goal might not contain all possible goals
@@ -92,19 +92,26 @@ Based on https://github.com/lisarah/geometric/blob/master/lti.py
 
 Linear time-varying LQR controller
 """
+
+OFFSET_GRAVITY = True
+
 class Controller_LQR_Point2Point():
+    
     def __init__(self, get_time, quad, params, identifier):
         self.get_time = get_time
         self.quad = quad
         self.id = identifier
         self.goals = params['Goals']
         self.curr_goal = {'time': 0, 'position': (0,0,0), 'yaw': 0}
-        self.MOTOR_LIMITS = params['Motor_limits']
-        self.TILT_LIMITS = [(params['Tilt_limits'][0]/180.0)*3.14,(params['Tilt_limits'][1]/180.0)*3.14]
-        self.YAW_CONTROL_LIMITS = params['Yaw_Control_Limits']
+        self.THRUST_LIMITS = params['Thrust_limits']
+        self.thrust_control_matrix = np.array([[1/4,             0,  1/(2*quad.L),  1/(4*quad.b)],
+                                               [1/4,  1/(2*quad.L),             0, -1/(4*quad.b)],
+                                               [1/4,             0, -1/(2*quad.L),  1/(4*quad.b)],
+                                               [1/4, -1/(2*quad.L),             0, -1/(4*quad.b)]])
         self.Q = params['Q']
         self.R = params['R']
-        self.quad.get_ltv_system()
+        self.K = np.zeros([4, 12])
+        self.quad.set_thrusts(self.quad.mass * self.quad.g / 4 * np.ones(4))
     
     def update(self, dt):
         if (len(self.goals) > 0) and (self.get_time() > self.goals[0]['time']):
@@ -114,12 +121,18 @@ class Controller_LQR_Point2Point():
         state[POS] -= self.curr_goal['position']
         state[EUL][2] -= self.curr_goal['yaw']
         A,B = self.quad.get_ltv_system()
-        P = sla.solve_continuous_are(A,B,self.Q,self.R)
-        K = -sla.inv(self.R).dot(B.T).dot(P)
-        print(K)
-        u = np.dot(K, state)
-        u = np.clip(u,self.MOTOR_LIMITS[0],self.MOTOR_LIMITS[1])
-        self.quad.actuate(u)
+        try:
+            P = sla.solve_continuous_are(A,B,self.Q,self.R)
+        except np.linalg.LinAlgError as err:
+            # puts the error where it's actually visible
+            print(self.id + ' LQR algebraic Ricatti equation: ' + str(err))
+        else:
+            self.K = -sla.inv(self.R).dot(B.T).dot(P)
+        U = np.dot(self.K, state)
+        if OFFSET_GRAVITY:
+            U[0] += self.quad.mass * self.quad.g
+        u = np.clip(self.thrust_control_matrix @ U, self.THRUST_LIMITS[0], self.THRUST_LIMITS[1])
+        self.quad.set_thrusts(u)
 
     def update_goal(self,new_goal):
         # new_goal might not contain all possible goals
