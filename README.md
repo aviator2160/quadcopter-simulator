@@ -1,7 +1,7 @@
-# Quadcopter simulator
-A quadcopter simulator with single and multi-quad simulations. The simulator supports time scaling (including real-time simulations) and headless mode (the simulator runs in background without a GUI update).
+# Quadcopter and slung load simulator
+An environment to simulate quadcopter teams carrying slung payloads using various types of controllers. Eventually to simulate disturbance decoupling. The simulator supports time scaling (including real-time simulations) and headless mode (the simulator runs in background without a GUI update).
 
-This simulator environment was created by Abhijit Majumdar (<https://github.com/abhijitmajumdar/Quadcopter_simulator>) and modified by Avi Mittal.
+This simulator environment is being developed by Avi Mittal, based on one created by Abhijit Majumdar (<https://github.com/abhijitmajumdar/Quadcopter_simulator>).
 
 ![Single Quadcopter Simulation](/quad_sim.gif?raw=true "quad_sim")
 
@@ -14,46 +14,77 @@ Multi Quadcopter Simulation
 ## Dependencies
 - Simulation of dynamics:
     - Numpy
-    - Math
-    - SciPy
+    - SciPy (integrate, linalg)
+- Controllers
+	- Cvxpy (not yet used)
 - GUI:
-    - Matplotlib
+    - Matplotlib (pyplot, animation)
     - Matplotlib Mapping Toolkits
 - Threading:
-    - Time
     - Datetime
+    - Time
     - Threading
+- Input/Output:
+	- Argparse
+	- Signal
+	- Sys
 
 ## How to run
-Clone the repository, move into the directory, and run the code:
+1. Clone the repository
+2. Move into the directory
+3. Run the code
 ```sh
-$ git clone https://github.com/abhijitmajumdar/Quadcopter_simulator.git
-$ cd Quadcopter_simulator
-$ python quad_sim.py --sim single_p2p
+$ git clone https://github.com/aviator2160/disturbance-decoupling.git
+$ cd disturbance_decoupling
+$ python simulate.py --sim single_pid_p2p
 ```
 
-#### Other examples:
-Single quad with point to point control simulator:
+#### List of example simulations:
+- Single quad with point-to-point proportional-integral-derivative (PID) control:
 ```sh
-$ python quad_sim.py --sim single_p2p
+$ python simulate.py --sim single_pid_p2p
 ```
-Multi quad with point to point control:
+- Multiple (two) quads with point to point PID control:
 ```sh
-$ python quad_sim.py --sim multi_p2p
+$ python simulate.py --sim multi_pid_p2p
 ```
-single quad with x-y velocity control:
+- Single quad with point-to-point continuous-time linear-quadratic regulator (LQR) control:
 ```sh
-$ python quad_sim.py --sim single_velocity
+$ python simulate.py --sim single_lqr_p2p
 ```
-Changing time scaling, dynamics update time and controller update time:
+- Single quad carrying a slung load with point-to-point PID control:
 ```sh
-$ python quad_sim.py --sim single_p2p --time_scale 0.5 --quad_update_time 0.002 --controller_update_time 0.005
+$ python simulate.py --sim slung_pid_p2p
 ```
-These parameters can also be changed by editing the script *quad_sim.py*, which will however be overridden by command line arguments, if provided.
+- Single quad carrying a slung load with point-to-point LQR control:
+```sh
+$ python simulate.py --sim slung_lqr_p2p
+```
+- Team of quads (four) carrying a slung load with with point-to-point LQR control:
+```sh
+$ python simulate.py --sim multi_slung_lqr_p2p
+```
 
+#### Other parameter examples
+- Speeding up time scaling (default 1.0) to double-speed (0.5)
+```sh
+$ python simulate.py --sim single_pid_p2p --time_scale 0.5
+```
+- Refining physics timestep (default 0.01 s) to 0.02s
+```sh
+$ python simulate.py --sim single_pid_p2p --phys_timestep 0.02
+```
+- Enabling headless mode (turns off GUI)
+```sh
+$ python simulate.py --sim single_pid_p2p --headless
+```
+These parameters can also be changed by editing the default parameters in the script `simulate.py`. These parameters will still be overridden by command line arguments, if provided.
 
-## Working
-The main classes which define the simulator are Propeller, Quadcopter and GUI. There is also a sample Controller classes, which implements a controller for the quadcopter. The objective was to make a quadcopter dynamic simulator, which allowed us to control each motor individually. The other requirement was the ability to run the simulations in the background, hence possibly expediting the computations, commonly referred to as the headless mode. Once the simulator thread is started, the GUI may or may not be updated at the developers will. There is also a time scaling factor, which can allow the simulation to run as fast as the processor supports, and as slow as one can fall asleep doing so.
+#### Adding simulations
+All simulations are defined in `sim_defs.py`. To add a new simulation, adding a new dictionary containing its definitions to this file. One can define the number and parameters of quadcopters, controllers, payloads, and cables.
+
+## Implementation (everything past this point is OUTDATED)
+The main classes which define the simulator are Quadcopter and GUI. There is also a sample Controller classes, which implements a controller for the quadcopter. The objective was to make a quadcopter dynamic simulator, which allowed us to control each motor individually. The other requirement was the ability to run the simulations in the background, hence possibly expediting the computations, commonly referred to as the headless mode. Once the simulator thread is started, the GUI may or may not be updated at the developers will. There is also a time scaling factor, which can allow the simulation to run as fast as the processor supports, and as slow as one can fall asleep doing so.
 
 ##### Propeller class
 This class defines the thrust generated by a propeller of a specified size at a given speed of rotation. This was based on the equation provided on http://www.electricrcaircraftguy.com/2013/09/propeller-static-dynamic-thrust-equation.html. This was made into a separate class to enable the implementation of other multi-rotors as well.
