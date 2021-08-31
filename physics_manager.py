@@ -22,7 +22,7 @@ class PhysicsManager():
     
     def __init__(self,QUAD_DEFS,LOAD_DEFS,CABLE_DEFS,CTRL_DEFS):
         self.WAIT_WAKE_RATE = 0.02
-        self.TIME_SCALING_EPSILON = 0.01
+        self.time_scaling_EPSILON = 0.01
         self.quads = {}
         for key in QUAD_DEFS:
             self.quads[key] = Quadcopter(QUAD_DEFS[key])
@@ -64,33 +64,34 @@ class PhysicsManager():
             load.update(dt)
         for cable in self.cables.values():
             cable.update(dt)
-        for ctrl in self.ctrls.values():
-            ctrl.update(dt)
     
     def start_threads(self, phys_dt, ctrl_dt, time_scaling):
-        if time_scaling > self.TIME_SCALING_EPSILON:
-            self.time_scaling = time_scaling
-        else:
-            self.time_scaling = self.TIME_SCALING_EPSILON
+        time.sleep(0.1) # Extra time to let GUI initialize
+        self.time_scaling = max(time_scaling, self.time_scaling_EPSILON)
         self.run = True
         self.pause = False
         self.start = datetime.datetime.now()
         self.pause_start = self.start
         self.time_paused = 0
-        self.phys_thread = threading.Thread(target=self.run_thread,args=(phys_dt,self.phys_update,phys_dt))
-        #self.ctrls['q1'].update(phys_dt)
+        self.phys_thread = threading.Thread(target=self.run_thread,args=(phys_dt,ctrl_dt))
         self.phys_thread.start()
     
-    def run_thread(self, dt, update, args=None):
-        update_num = 0
-        time.sleep(self.WAIT_WAKE_RATE)
+    def run_thread(self, phys_dt, ctrl_dt):
+        phys_update_num = 0
+        ctrl_update_num = 0
         while(self.run==True):
             time.sleep(0)
             curr_time = self.get_time()
-            if curr_time > update_num * dt:
-                update(args)
-                update_num += 1
-        print(update_num)
+            if curr_time > phys_update_num * phys_dt:
+                self.phys_update(phys_dt)
+                phys_update_num += 1
+            if curr_time > ctrl_update_num * ctrl_dt:
+                for ctrl in self.ctrls.values():
+                    ctrl.update(ctrl_dt)
+                ctrl_update_num += 1
+        # print(phys_update_num)
+        # print(self.get_time() / phys_update_num)
+        # print(ctrl_update_num)
     
     def stop_threads(self):
         self.run = False
@@ -102,7 +103,7 @@ class PhysicsManager():
         else:
             self.time_paused += (datetime.datetime.now() - self.pause_start).total_seconds()
     
-    def wait_until_time(self, end_time, check_quit):
+    def wait_until_time(self, end_time):
         while self.run:
             remaining = (end_time - self.get_time()) * self.time_scaling
             if remaining <= 0:
