@@ -44,13 +44,21 @@ $ python simulate.py --sim single_pid_p2p
 ```sh
 $ python simulate.py --sim single_pid_p2p
 ```
+- Single quad with point-to-point continuous-time linear-quadratic regulator (LQR) control:
+```sh
+$ python simulate.py --sim single_lqr_p2p
+```
+- One quad with point-to-point PID control and a second quad with point-to-point LQR control, on parallel trajectories:
+```sh
+$ python simulate.py --sim both_p2p
+```
 - Multiple (two) quads with point to point PID control:
 ```sh
 $ python simulate.py --sim multi_pid_p2p
 ```
-- Single quad with point-to-point continuous-time linear-quadratic regulator (LQR) control:
+- Multiple (two) quads with point to point LQR control:
 ```sh
-$ python simulate.py --sim single_lqr_p2p
+$ python simulate.py --sim multi_lqr_p2p
 ```
 - Single quad carrying a slung load with point-to-point PID control:
 ```sh
@@ -59,6 +67,10 @@ $ python simulate.py --sim slung_pid_p2p
 - Single quad carrying a slung load with point-to-point LQR control:
 ```sh
 $ python simulate.py --sim slung_lqr_p2p
+```
+- Team of quads (four) carrying a slung load with with point-to-point PID control:
+```sh
+$ python simulate.py --sim multi_slung_pid_p2p
 ```
 - Team of quads (four) carrying a slung load with with point-to-point LQR control:
 ```sh
@@ -70,9 +82,9 @@ $ python simulate.py --sim multi_slung_lqr_p2p
 ```sh
 $ python simulate.py --sim single_pid_p2p --time_scale 0.5
 ```
-- Refining physics timestep (default 0.01 s) to 0.02s
+- Refining physics timestep (default 0.01 s) to 0.005s
 ```sh
-$ python simulate.py --sim single_pid_p2p --phys_timestep 0.02
+$ python simulate.py --sim single_pid_p2p --phys_timestep 0.005
 ```
 - Enabling headless mode (turns off GUI)
 ```sh
@@ -81,7 +93,7 @@ $ python simulate.py --sim single_pid_p2p --headless
 These parameters can also be changed by editing the default parameters in the script `simulate.py`. These parameters will still be overridden by command line arguments, if provided.
 
 #### Adding simulations
-All simulations are defined in `sim_defs.py`. To add a new simulation, adding a new dictionary containing its definitions to this file. One can define the number and parameters of quadcopters, controllers, payloads, and cables.
+All simulations are defined in `sim_defs.py`. To add a new simulation, adding a new dictionary containing its definitions to this file. One can define the number of and parameters for quadcopters, controllers, payloads, and cables.
 
 ## Implementation (everything past this point is OUTDATED)
 The main classes which define the simulator are Quadcopter and GUI. There is also a sample Controller classes, which implements a controller for the quadcopter. The objective was to make a quadcopter dynamic simulator, which allowed us to control each motor individually. The other requirement was the ability to run the simulations in the background, hence possibly expediting the computations, commonly referred to as the headless mode. Once the simulator thread is started, the GUI may or may not be updated at the developers will. There is also a time scaling factor, which can allow the simulation to run as fast as the processor supports, and as slow as one can fall asleep doing so.
@@ -112,13 +124,10 @@ Two example implementation of controller class are provided. One is to implement
 - CONTROLLER(N)PARAMETERS: The parameters which define the controller behavior: Motor limits, Tilt limits, Yaw_Control_Limits, Throttle offset, Linear PID, Linear to Angular Scaler, Yaw_Rate_Scaler and Angular PID
 - GOAL(S): The goals to loop over
 
-
-
-
 ## Changes
-- Fixed the quit using Ctrl+c (only works if the animated plot is not open)
-- Added pause/unpause functionality in gui with 'p' key
+- Added sim showcasing LQR control with different sizes of drones
+- Added sims showcasing PID and LQR control for teams of quads carrying slung loads
 
 ## To-do
-- Fix headless mode to work after closing the gui or with a cmd argument
-- Test manual blitting instead of matplotlib animations, to see if it's faster
+- Add disturbance decoupling LQR controller
+- Tune PIDs more finely?
