@@ -14,9 +14,9 @@ import argparse
 
 # Constants
 
-DEFAULT_SIM = 'slung_lqr_p2p'
+DEFAULT_SIM = 'single_lqr_p2p'
 HEADLESS = False
-TIME_SCALING = 2.5 # Any positive number(Smaller is faster). 1.0->Real Time, 0.0->Run as fast as possible
+TIME_SCALING = 1.0 # Any positive number(Smaller is faster). 1.0->Real Time, 0.0->Run as fast as possible
 PHYSICAL_DYNAMICS_UPDATE = 0.01 # seconds
 CONTROLLER_DYNAMICS_UPDATE = 0.05 # seconds
 run = True
