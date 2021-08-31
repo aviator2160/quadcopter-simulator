@@ -2,13 +2,16 @@ import util
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as color
 import mpl_toolkits.mplot3d.axes3d as Axes3D
 import matplotlib.animation as animation
 import sys
 
-PAUSE_ON_START = False
+PAUSE_ON_START = True
+SHOW_TRAILS = True
+DARK_MODE = True
 
-class GUI():
+class Sim_GUI():
     # 'quad_list' is a dictionary of format: quad_list = {'quad_1_name':{'position':quad_1_position,'orientation':quad_1_orientation,'arm_span':quad_1_arm_span}, ...}
     def __init__(self,QUAD_DEFS,LOAD_DEFS,CABLE_DEFS,get_data,get_time):
         self.quads = QUAD_DEFS
@@ -26,12 +29,26 @@ class GUI():
         self.ax.set_zlim3d([0, 5.0])
         self.ax.set_zlabel('Z')
         self.ax.set_title('Quadcopter Simulation')
-        self.init_plot()
+        if DARK_MODE:
+            self.ax.set_facecolor((0.1,0.15,0.2))
+            for pane in [self.ax.w_xaxis, self.ax.w_yaxis, self.ax.w_zaxis]:
+                pane.set_pane_color((0.2,0.3,0.4))
+            self.ax.grid(color='whitesmoke')
+            for axis,name in zip([self.ax.xaxis,self.ax.yaxis,self.ax.zaxis],['x','y','z']):
+                axis.label.set_color('whitesmoke')
+                self.ax.tick_params(axis=name, colors='whitesmoke')
+        # self.init_plot()
+        #plt.figtext(0.02,0.95,'PID control (2x speed)',fontsize=20)
         self.fig.canvas.mpl_connect('key_press_event', self.key_press_routine)
         self.fig.canvas.mpl_connect('close_event', self.close_routine)
         
     def init_plot(self):
         blit_artists = []
+        for i,quad in enumerate(self.quads.values()):
+            quad['color'] = color.hsv_to_rgb(((0.3 + 0.4 * i) % 1, 0.8, 1))
+            if (SHOW_TRAILS):
+                quad['trail'], = self.ax.plot([],[],[],color=quad['color'],linewidth=0.5,antialiased=False)
+                blit_artists.append(quad['trail'])
         for key in self.loads:
             self.loads[key]['lines'] = [None] * 4
             self.loads[key]['lines'][0], = self.ax.plot([],[],[],color='red',linewidth=3,antialiased=False)
@@ -41,20 +58,24 @@ class GUI():
             for line in self.loads[key]['lines']:
                 blit_artists.append(line)
         for key in self.cables:
-            self.cables[key]['line'], = self.ax.plot([],[],[],color='black',linewidth=0.5,antialiased=False)
+            self.cables[key]['line'], = self.ax.plot([],[],[],color='lightgray',linewidth=0.5,antialiased=False)
             blit_artists.append(self.cables[key]['line'])
         for key in self.quads:
             self.quads[key]['l1'], = self.ax.plot([],[],[],color='blue',linewidth=3,antialiased=False)
             self.quads[key]['l2'], = self.ax.plot([],[],[],color='red',linewidth=3,antialiased=False)
-            self.quads[key]['hub'], = self.ax.plot([],[],[],marker='o',color='green', markersize=6,antialiased=False)
+            self.quads[key]['hub'], = self.ax.plot([],[],[],marker='o',color=self.quads[key]['color'],markersize=6,antialiased=False)
             blit_artists.append(self.quads[key]['l1'])
             blit_artists.append(self.quads[key]['l2'])
-            blit_artists.append(self.quads[key]['hub'])
         return tuple(blit_artists)
     
     def update(self, i=0):
         blit_artists = []
         data = self.get_data()
+        if (SHOW_TRAILS):
+            for key in self.quads:
+                trail_pts_update = zip(self.quads[key]['trail'].get_data_3d(), data[key]['position'])
+                self.quads[key]['trail'].set_data_3d([np.append(curr,new) for curr,new in trail_pts_update])
+                blit_artists.append(self.quads[key]['trail'])
         for key in self.loads:
             self.loads[key]['position'] = data[key]['position']
             self.loads[key]['orientation'] = data[key]['orientation']
@@ -120,10 +141,8 @@ class GUI():
         self.pause_sim(self.pause)
         if self.pause == True:
             self.anim.pause()
-            self.init_plot()
         else:
             self.anim.resume()
-            self.init_plot()
 
     def key_press_routine(self,event):
         sys.stdout.flush()
