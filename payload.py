@@ -17,20 +17,16 @@ OMG = slice(9,12)
 # State space representation: [x y z x_dot y_dot z_dot theta phi gamma theta_dot phi_dot gamma_dot]
 def state_dot(time, state, load):
     state_dot = np.zeros(12)
-    # The velocities(t+1 x_dots equal the t x_dots)
+    # Velocity
     state_dot[POS] = state[VEL]
-    # The acceleration
+    # Acceleration
     x_dotdot = np.array([0,0,-load.g]) + load.inertial_force/load.mass
     state_dot[VEL] = x_dotdot
-    # The angular rates(t+1 theta_dots equal the t theta_dots)
-    state_dot[EUL] = state[OMG]
-    # The angular accelerations
+    # Euler rates
+    state_dot[EUL] = util.body_omega_to_euler_rates_matrix(state[EUL]) @ state[OMG]
+    # Angular acceleration
     omega = state[OMG]
-    # R = util.rotation_matrix(state[EUL])
-    # J = R @ load.J @ R.T
-    # invJ = R @ load.invJ @ R.T
-    # omega_dot = np.dot(invJ, (R @ load.body_moment - np.cross(omega, np.dot(J, omega))))
-    omega_dot = np.dot(load.invJ, (load.body_moment - np.cross(omega, np.dot(load.J, omega))))
+    omega_dot = load.invJ @ (load.body_moment - np.cross(omega, load.J @ omega))
     state_dot[OMG] = omega_dot
     return state_dot
 

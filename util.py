@@ -8,18 +8,32 @@ General simulation utility functions
 """
 import numpy as np
 
+def yaw_matrix(gamma):
+    cg = np.cos(gamma)
+    sg = np.sin(gamma)
+    return np.array([[cg,-sg,0],
+                     [sg, cg,0],
+                     [ 0,  0,1]])
+
+def pitch_matrix(phi):
+    cp = np.cos(phi)
+    sp = np.sin(phi)
+    return np.array([[ cp,0,sp],
+                     [  0,1, 0],
+                     [-sp,0,cp]])
+
+def roll_matrix(theta):
+    ct = np.cos(theta)
+    st = np.sin(theta)
+    return np.array([[1, 0,  0],
+                     [0,ct,-st],
+                     [0,st, ct]])
+
 def rotation_matrix(angles):
-    ct = np.cos(angles[0])
-    cp = np.cos(angles[1])
-    cg = np.cos(angles[2])
-    st = np.sin(angles[0])
-    sp = np.sin(angles[1])
-    sg = np.sin(angles[2])
-    R_x = np.array([[1,0,0],[0,ct,-st],[0,st,ct]])
-    R_y = np.array([[cp,0,sp],[0,1,0],[-sp,0,cp]])
-    R_z = np.array([[cg,-sg,0],[sg,cg,0],[0,0,1]])
-    R = np.dot(R_z, np.dot( R_y, R_x ))
-    return R
+    R_x = roll_matrix(angles[0])
+    R_y = pitch_matrix(angles[1])
+    R_z = yaw_matrix(angles[2])
+    return R_z @ R_y @ R_x
 
 """
 Given an input 3-vector A, returns the 3x3 matrix such that left-multiplying
@@ -37,6 +51,15 @@ def cross_matrix(vector):
 
 def wrap_angle(angle):
     return((angle + np.pi) % (2 * np.pi ) - np.pi)
+
+def body_omega_to_euler_rates_matrix(angles):
+    ct = np.cos(angles[0])
+    tt = np.tan(angles[0])
+    cp = np.cos(angles[1])
+    sp = np.sin(angles[1])
+    return np.array([[1,sp * tt,cp * tt],
+                     [0,     cp,    -sp],
+                     [0,sp / ct,cp / ct]])
 
 """
 Returns list of matrices based on the given matrix of moment arms (column
