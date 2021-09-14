@@ -113,7 +113,7 @@ class Sim_GUI():
         return tuple(blit_artists)
     
     def frame_iter(self):
-        while self.get_time() < self.sim_duration:
+        while self.run and self.get_time() < self.sim_duration:
             yield
         self.run = False
     
