@@ -1,4 +1,6 @@
 import util
+import disturbance_decouple as dd
+import subspace
 
 from abc import ABC, abstractmethod
 import numpy as np
@@ -135,6 +137,52 @@ class Controller_LQR_P2P(Controller_P2P):
         u = np.clip(self.thrust_control_matrix @ U, self.THRUST_LIMITS[0], self.THRUST_LIMITS[1])
         self.quad.set_thrusts(u)
 
+class Controller_DDLQR_P2P(Controller_P2P):
+    
+    def initialize(self, params):
+        self.THRUST_LIMITS = self.quad.thrust_limits
+        self.thrust_control_matrix = np.array([[1/4,                  0,  1/(2*self.quad.L),  1/(4*self.quad.b)],
+                                               [1/4,  1/(2*self.quad.L),                  0, -1/(4*self.quad.b)],
+                                               [1/4,                  0, -1/(2*self.quad.L),  1/(4*self.quad.b)],
+                                               [1/4, -1/(2*self.quad.L),                  0, -1/(4*self.quad.b)]])
+        self.Q = params['Q']
+        self.R = params['R']
+        self.E = np.zeros((12,2))
+        self.E[VEL,:] = np.eye(3,2)
+        self.H = np.zeros((2,12))
+        self.H[:,EUL] = np.eye(2,3)
+        self.K = np.zeros((12,4))
+        self.F = np.zeros((12,4))
+        self.offset_gravity = params['offset_gravity']
+        self.quad.set_thrusts(self.quad.mass * self.quad.g / 4 * np.ones(4))
+    
+    def update(self, dt):
+        state = np.zeros(12)
+        state = self.quad.get_state().copy()
+        state[POS] -= self.curr_goal['position']
+        state[EUL][2] -= self.curr_goal['yaw']
+        state[EUL][2] = util.wrap_angle(state[EUL][2])
+        # print(state[6:8])
+        # Generate LQR feedback controller
+        A,B = self.quad.get_ltv_system()
+        try:
+            P = sla.solve_continuous_are(A,B,self.Q,self.R)
+        except (np.linalg.LinAlgError, ValueError) as err:
+            # puts the error where it's actually visible
+            print(self.quad.id + ' LQR algebraic Ricatti equation: ' + str(err))
+        else:
+            self.K = -sla.inv(self.R).dot(B.T).dot(P)
+        # Generate disturbance decoupling feedback controller
+        A_star = A + B @ self.K
+        V_0,self.F = dd.disturbance_decoupling(self.H,A_star,B,verbose=False)
+        if not subspace.contained(subspace.image(self.E), V_0):
+            print('Disturbance matrix intersects the decoupling space.')
+        # Apply overall controller
+        E,V = sla.eig(A + B @ (self.K + self.F))
+        U = np.dot(self.K + self.F, state)
+        U[0] += self.quad.mass * self.quad.g * self.offset_gravity
+        u = np.clip(self.thrust_control_matrix @ U, self.THRUST_LIMITS[0], self.THRUST_LIMITS[1])
+        self.quad.set_thrusts(u)
 
 controller_defs = {
     'pid_p2p': Controller_PID_P2P,

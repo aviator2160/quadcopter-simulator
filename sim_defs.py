@@ -384,8 +384,32 @@ Single_PID_P2P = {
         },
     }
 
+Test = {
+    'SIM_DURATION': 15, # simulated seconds
+    # Define the quadcopters
+    'QUADCOPTER_DEFS':{
+        'q1':{
+            'position':[0,0,3],'orientation':[0,0,0],
+            },
+        },
+    # Controller parameters
+    'CONTROLLER_DEFS':{
+        'q1':{
+            # 'Type':'lqr_p2p',
+            'Type':'dd_p2p',
+            'Goals':[
+                {'time': 0,  'position': ( 1, 0,3), 'yaw': 0},
+                ],
+            'offset_gravity':0, # Fraction of quad weight
+            'Q': np.diag([1,1,50, 1,1,5, 10,10,0.1, 1,1,0.1]),
+            # 'Q': np.diag([0,0,50, 0,0,5, 10,10,0.1, 1,1,0.1]),
+            'R': np.eye(4) * 0.1
+            },
+        },
+    }
+
 DEFAULT_QUAD = {
-    'position':[0,0,0],'orientation':[0,0,0],
+    'position':[0,0,0],'orientation': np.random.normal(0,0.3,3),
     'L': 0.3,'r': 0.1,'mass': 1.0,
     'prop_size':[10,4.5],'prop_torque_coeff': 0.0245,
     'thrust_limits':[-10,10],
@@ -404,6 +428,11 @@ DEFAULT_CONTROLLERS = {
         'R': np.diag([1, 1,1,1]),
         'offset_gravity': 1,
         },
+    'dd_p2p':{
+        'Q': np.diag([1,1,50, 1,1,5, 10,10,0.1, 1,1,0.1]),
+        'R': np.diag([1, 1,1,1]),
+        'offset_gravity': 1,
+        },
     }
 
 defs = {
@@ -417,6 +446,7 @@ defs = {
     'single_pid_p2p': Single_PID_P2P,
     'both_p2p': Both_P2P,
     'slung_both_p2p': Slung_Both_P2P,
+    'test': Test,
     }
 
 for sim in defs.values():
