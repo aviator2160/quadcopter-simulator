@@ -56,44 +56,27 @@ class Controller_PID_P2P(Controller_P2P):
         self.ANGULAR_P = params['Angular_PID']['P']
         self.ANGULAR_I = params['Angular_PID']['I']
         self.ANGULAR_D = params['Angular_PID']['D']
-        self.xi_term = 0
-        self.yi_term = 0
-        self.zi_term = 0
-        self.thetai_term = 0
-        self.phii_term = 0
-        self.gammai_term = 0
+        self.linear_i_term = np.zeros(3)
+        self.angular_i_term = np.zeros(3)
     
     def update(self, dt):
-        if (len(self.goals) > 0) and (self.get_time() > self.goals[0]['time']):
-            self.update_goal(self.goals.pop(0))
-        [dest_x,dest_y,dest_z] = self.curr_goal['position']
-        [x,y,z,x_dot,y_dot,z_dot,theta,phi,gamma,theta_dot,phi_dot,gamma_dot] = self.quad.get_state()
-        x_error = dest_x-x
-        y_error = dest_y-y
-        z_error = dest_z-z
-        self.xi_term += self.LINEAR_I[0]*x_error*dt
-        self.yi_term += self.LINEAR_I[1]*y_error*dt
-        self.zi_term += self.LINEAR_I[2]*z_error*dt
-        cmd_x_dot = self.LINEAR_P[0]*(x_error) + self.LINEAR_D[0]*(-x_dot) + self.xi_term
-        cmd_y_dot = self.LINEAR_P[1]*(y_error) + self.LINEAR_D[1]*(-y_dot) + self.yi_term
-        cmd_z_dot = self.LINEAR_P[2]*(z_error) + self.LINEAR_D[2]*(-z_dot) + self.zi_term
-        throttle = cmd_z_dot + self.quad.mass * self.quad.g * self.offset_gravity / 4
-        dest_theta = self.LINEAR_TO_ANGULAR_SCALER[0]*(cmd_x_dot*np.sin(gamma)-cmd_y_dot*np.cos(gamma))
-        dest_phi = self.LINEAR_TO_ANGULAR_SCALER[1]*(cmd_x_dot*np.cos(gamma)+cmd_y_dot*np.sin(gamma))
+        state = self.quad.get_state()
+        linear_error = self.curr_goal['position'] - state[POS]
+        self.linear_i_term += self.LINEAR_I * linear_error * dt
+        cmd_thrust = self.LINEAR_P * linear_error - self.LINEAR_D * state[VEL] + self.linear_i_term
+        throttle = cmd_thrust[2] + self.quad.mass * self.quad.g * self.offset_gravity / 4
+        gamma = state[EUL][2]
+        dest_theta = self.LINEAR_TO_ANGULAR_SCALER[0] * (cmd_thrust[0] * np.sin(gamma) - cmd_thrust[1] * np.cos(gamma))
+        dest_phi   = self.LINEAR_TO_ANGULAR_SCALER[1] * (cmd_thrust[0] * np.cos(gamma) + cmd_thrust[1] * np.sin(gamma))
         dest_gamma = self.curr_goal['yaw']
-        theta_error = dest_theta-theta
-        phi_error = dest_phi-phi
-        gamma_error = util.wrap_angle(dest_gamma - gamma)# - gamma_dot
-        self.thetai_term += self.ANGULAR_I[0]*theta_error
-        self.phii_term += self.ANGULAR_I[1]*phi_error
-        self.gammai_term += self.ANGULAR_I[2]*gamma_error
-        x_val = self.ANGULAR_P[0]*(theta_error) + self.ANGULAR_D[0]*(-theta_dot) + self.thetai_term
-        y_val = self.ANGULAR_P[1]*(phi_error) + self.ANGULAR_D[1]*(-phi_dot) + self.phii_term
-        z_val = self.ANGULAR_P[2]*(gamma_error) + self.ANGULAR_D[2]*(-gamma_dot) + self.gammai_term
-        m1 = throttle + y_val + z_val
-        m2 = throttle + x_val - z_val
-        m3 = throttle - y_val + z_val
-        m4 = throttle - x_val - z_val
+        dest_eulers = np.array([dest_theta,dest_phi,dest_gamma])
+        angular_error = util.wrap_angle(dest_eulers - state[EUL])
+        self.angular_i_term += self.ANGULAR_I * angular_error * dt
+        cmd_torque = self.ANGULAR_P * angular_error - self.ANGULAR_D * state[OMG] + self.angular_i_term
+        m1 = throttle + cmd_torque[1] + cmd_torque[2]
+        m2 = throttle + cmd_torque[0] - cmd_torque[2]
+        m3 = throttle - cmd_torque[1] + cmd_torque[2]
+        m4 = throttle - cmd_torque[0] - cmd_torque[2]
         M = np.clip([m1,m2,m3,m4],self.THRUST_LIMITS[0],self.THRUST_LIMITS[1])
         self.quad.set_thrusts(M)
 
