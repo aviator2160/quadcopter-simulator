@@ -22,14 +22,18 @@ def state_dot(time, state, quad):
     omega = state[OMG]
     state_dot[EUL] = util.body_omega_to_euler_rates_matrix(state[EUL]) @ omega
     # Angular acceleration
-    quad.moment = np.array([quad.L * (quad.thrusts[1] - quad.thrusts[3]), quad.L * (quad.thrusts[0] - quad.thrusts[2]), quad.b * (quad.thrusts[0] - quad.thrusts[1] + quad.thrusts[2] - quad.thrusts[3])])
-    omega_dot = quad.invJ @ (quad.moment - np.cross(omega, quad.J @ omega))
+    quad.body_moment = np.array([quad.L * (quad.thrusts[1] - quad.thrusts[3]),
+                                 quad.L * (quad.thrusts[0] - quad.thrusts[2]),
+                                 quad.b * (quad.thrusts[0] - quad.thrusts[1] + quad.thrusts[2] - quad.thrusts[3])])
+    quad.body_moment += R.T @ quad.external_torque
+    omega_dot = quad.invJ @ (quad.body_moment - np.cross(omega, quad.J @ omega))
     state_dot[OMG] = omega_dot
     return state_dot
 
 class Quadcopter():
     
-    def __init__(self,defs,g=9.81):
+    def __init__(self,name,defs,g=9.81):
+        self.id = name
         self.g = g
         self.state = np.zeros(12)
         self.state[POS] = defs['position']
@@ -45,7 +49,8 @@ class Quadcopter():
         self.prop_thrust_const = 4.392e-8 * np.power(dia,3.5) / (np.sqrt(pitch)) * 4.23e-4 * pitch
         self.thrusts = np.zeros(4)
         self.external_force = np.zeros(3)
-        self.moment = np.zeros(3)
+        self.external_torque = np.zeros(3)
+        self.body_moment = np.zeros(3)
         # From Quadrotor Dynamics and Control by Randal Beard
         ixx = ((2*self.mass*self.r**2)/5)+(2*self.mass*self.L**2)
         iyy = ixx
@@ -91,6 +96,12 @@ class Quadcopter():
     
     def set_external_force(self,force):
         self.external_force = force
+        
+    def add_external_torque(self,torque):
+        self.external_torque += torque
+    
+    def set_external_torque(self,torque):
+        self.external_torque = torque
     
     def get_ltv_system(self):
         # Linearization of state_dot, returning A and B from Ax = B
@@ -99,7 +110,6 @@ class Quadcopter():
         # A matrix
         A = np.zeros((n,n))
         A[POS,VEL] = np.eye(3) # position <- velocity
-        A[EUL,OMG] = np.eye(3) # orientation <- angular velocity
         eulers = self.state[EUL]
         omega = self.state[OMG]
         R = util.rotation_matrix(eulers)

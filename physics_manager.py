@@ -32,10 +32,10 @@ class PhysicsManager():
         self.time_scaling_EPSILON = 0.01
         self.quads = {}
         for key in QUAD_DEFS:
-            self.quads[key] = Quadcopter(QUAD_DEFS[key])
+            self.quads[key] = Quadcopter(name=key,defs=QUAD_DEFS[key])
         self.ctrls = {}
         for key in CTRL_DEFS:
-            self.ctrls[key] = controller.new_controller(get_time=self.get_time,quad=self.quads[key],params=CTRL_DEFS[key],identifier=key)
+            self.ctrls[key] = controller.Controller(get_time=self.get_time,quad=self.quads[key],params=CTRL_DEFS[key])
         self.loads = {}
         for key in LOAD_DEFS:
             self.loads[key] = Payload(LOAD_DEFS[key])
@@ -64,7 +64,7 @@ class PhysicsManager():
             data[key] = zip(cable.quad.get_position(), cable.load.get_hardpoint(cable.hardpoint_num))
         return data
     
-    def phys_update(self, dt):
+    def get_update(self, dt):
         for quad in self.quads.values():
             if WINDY:
                 (wind,vortex) = self.get_wind()
