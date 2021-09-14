@@ -14,6 +14,13 @@ import datetime
 import time
 import threading
 
+WINDY = True
+WIND_Z = False
+WIND_FORCE = (0,0,0)
+WIND_NOISE = 0 # 20
+VORTEX_TORQUE = (0,0,0)
+VORTEX_NOISE = 0.0
+
 class PhysicsManager():
     """
     Handles general physics (e.g. sim time) and interactions between different
@@ -35,6 +42,7 @@ class PhysicsManager():
         self.cables = {}
         for key,defs in CABLE_DEFS.items():
             self.cables[key] = Cable(self.quads[defs['quad']],self.loads[defs['load']],defs['hardpoint'],defs['stiffness'],defs['damping'])
+        np.random.seed(1234)
     
     def get_time(self, scaled=True):
         if self.pause == False:
@@ -58,12 +66,25 @@ class PhysicsManager():
     
     def phys_update(self, dt):
         for quad in self.quads.values():
+            if WINDY:
+                (wind,vortex) = self.get_wind()
+                quad.add_external_force(wind)
+                quad.add_external_torque(vortex)
             quad.update(dt)
             quad.set_external_force(np.zeros(3))
         for load in self.loads.values():
             load.update(dt)
         for cable in self.cables.values():
             cable.update(dt)
+    
+    def get_wind(self):
+        wind = WIND_FORCE + np.random.normal(0,WIND_NOISE,3)
+        if not WIND_Z:
+            wind[2] = 0
+        vortex = VORTEX_TORQUE + np.random.normal(0,VORTEX_NOISE,3)
+        if not WIND_Z:
+            vortex[2] = 0
+        return (wind,vortex)
     
     def start_threads(self, phys_dt, ctrl_dt, time_scaling):
         time.sleep(0.1) # Extra time to let GUI initialize
@@ -83,13 +104,13 @@ class PhysicsManager():
             time.sleep(0)
             curr_time = self.get_time()
             if curr_time > phys_update_num * phys_dt:
-                self.phys_update(phys_dt)
+                self.get_update(phys_dt)
                 phys_update_num += 1
             if curr_time > ctrl_update_num * ctrl_dt:
                 for ctrl in self.ctrls.values():
-                    ctrl.update(ctrl_dt)
+                    ctrl.get_update(ctrl_dt)
                 ctrl_update_num += 1
-        # print(phys_update_num)
+        print(phys_update_num)
         # print(self.get_time() / phys_update_num)
         # print(ctrl_update_num)
     
