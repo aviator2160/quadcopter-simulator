@@ -16,7 +16,7 @@ def state_dot(time, state, quad):
     # Velocity
     state_dot[POS] = state[VEL]
     # Acceleration
-    x_dotdot = np.array([0,0,-quad.g]) + quad.external_force/quad.mass + np.dot(R,np.array([0,0,np.sum(quad.thrusts)]))/quad.mass
+    x_dotdot = np.array([0,0,-quad.g]) + 1/quad.mass * (quad.external_force + R[:,2] * np.sum(quad.thrusts))
     state_dot[VEL] = x_dotdot
     # Euler rate
     omega = state[OMG]
@@ -32,20 +32,20 @@ def state_dot(time, state, quad):
 
 class Quadcopter():
     
-    def __init__(self,name,defs,g=9.81):
+    def __init__(self,name,params,g=9.81):
         self.id = name
         self.g = g
         self.state = np.zeros(12)
-        self.state[POS] = defs['position']
-        self.state[EUL] = defs['orientation']
-        self.L = defs['L']
-        self.r = defs['r']
-        self.mass = defs['mass']
-        self.b = defs['prop_torque_coeff']
-        self.thrust_limits = defs['thrust_limits']
+        self.state[POS] = params['position']
+        self.state[EUL] = params['orientation']
+        self.L = params['L']
+        self.r = params['r']
+        self.mass = params['mass']
+        self.b = params['prop_torque_coeff']
+        self.THRUST_LIMITS = params['thrust_limits']
         # From http://www.electricrcaircraftguy.com/2013/09/propeller-static-dynamic-thrust-equation.html
-        dia = defs['prop_size'][0]
-        pitch = defs['prop_size'][1]
+        dia = params['prop_size'][0]
+        pitch = params['prop_size'][1]
         self.prop_thrust_const = 4.392e-8 * np.power(dia,3.5) / (np.sqrt(pitch)) * 4.23e-4 * pitch
         self.thrusts = np.zeros(4)
         self.external_force = np.zeros(3)
@@ -65,10 +65,10 @@ class Quadcopter():
 
     # @todo: add dependence of thrust on airspeed
     def set_speeds(self,vals):
-        self.thrusts = self.prop_thrust_const * np.sign(vals) * np.square(vals)
+        self.set_thrusts(self.prop_thrust_const * np.sign(vals) * np.square(vals))
     
     def set_thrusts(self,vals):
-        self.thrusts = vals
+        self.thrusts = np.clip(vals,self.THRUST_LIMITS[0],self.THRUST_LIMITS[1])
 
     def get_position(self):
         return self.state[POS]
@@ -104,7 +104,7 @@ class Quadcopter():
         self.external_torque = torque
     
     def get_ltv_system(self):
-        # Linearization of state_dot, returning A and B from Ax = B
+        # Linearization of state_dot, returning A and B from x_dot = Ax + B
         n = 12 # number of independent dynamic variables per rotorcraft
         m = 4 # number of independent input variables per rotorcraft
         # A matrix

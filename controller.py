@@ -12,17 +12,17 @@ EUL = slice(6,9)
 OMG = slice(9,12)
 
 def Controller(get_time, quad, params):
-    Specific_Controller = controller_defs.get(params['Type'])
+    Specific_Controller = controller_defs.get(params['type'])
     if Specific_Controller != None:
         return Specific_Controller(get_time, quad, params)
-    raise ControllerTypeNotFoundError(str(params['Type']) + " is not a recognized type of controller!")
+    raise ControllerTypeNotFoundError(str(params['type']) + " is not a recognized type of controller!")
 
 class Controller_P2P(ABC):
     
     def __init__(self, get_time, quad, params):
         self.get_time = get_time
         self.quad = quad
-        self.goals = params['Goals']
+        self.goals = params['goals']
         self.curr_goal = {'time': 0, 'position': (0,0,0), 'yaw': 0}
         self.initialize(params)
     
@@ -46,7 +46,6 @@ class Controller_P2P(ABC):
 class Controller_PID_P2P(Controller_P2P):
     
     def initialize(self, params):
-        self.THRUST_LIMITS = self.quad.thrust_limits
         self.offset_gravity = params['offset_gravity']
         self.quad.set_thrusts(self.quad.mass * self.quad.g / 4 * self.offset_gravity * np.ones(4))
         self.LINEAR_P = params['Linear_PID']['P']
@@ -77,8 +76,7 @@ class Controller_PID_P2P(Controller_P2P):
         m2 = throttle + cmd_torque[0] - cmd_torque[2]
         m3 = throttle - cmd_torque[1] + cmd_torque[2]
         m4 = throttle - cmd_torque[0] - cmd_torque[2]
-        M = np.clip([m1,m2,m3,m4],self.THRUST_LIMITS[0],self.THRUST_LIMITS[1])
-        self.quad.set_thrusts(M)
+        self.quad.set_thrusts([m1,m2,m3,m4])
 
 """
 Based on https://github.com/lisarah/geometric/blob/master/lti.py
@@ -89,7 +87,6 @@ Linear time-varying LQR controller
 class Controller_LQR_P2P(Controller_P2P):
     
     def initialize(self, params):
-        self.THRUST_LIMITS = self.quad.thrust_limits
         self.thrust_control_matrix = np.array([[1/4,                  0,  1/(2*self.quad.L),  1/(4*self.quad.b)],
                                                [1/4,  1/(2*self.quad.L),                  0, -1/(4*self.quad.b)],
                                                [1/4,                  0, -1/(2*self.quad.L),  1/(4*self.quad.b)],
@@ -115,15 +112,18 @@ class Controller_LQR_P2P(Controller_P2P):
             print(self.quad.id + ' LQR algebraic Ricatti equation: ' + str(err))
         else:
             self.K = -sla.inv(self.R).dot(B.T).dot(P)
+        E,V = sla.eig(A + B @ self.K)
+        # print(*sorted(E.round(2), key=lambda z: z.real))
         U = np.dot(self.K, state)
         U[0] += self.quad.mass * self.quad.g * self.offset_gravity
-        u = np.clip(self.thrust_control_matrix @ U, self.THRUST_LIMITS[0], self.THRUST_LIMITS[1])
+        u = self.thrust_control_matrix @ U
         self.quad.set_thrusts(u)
+        # print(np.around(U,2))
+        # print(np.around(B,2))
 
 class Controller_DDLQR_P2P(Controller_P2P):
     
     def initialize(self, params):
-        self.THRUST_LIMITS = self.quad.thrust_limits
         self.thrust_control_matrix = np.array([[1/4,                  0,  1/(2*self.quad.L),  1/(4*self.quad.b)],
                                                [1/4,  1/(2*self.quad.L),                  0, -1/(4*self.quad.b)],
                                                [1/4,                  0, -1/(2*self.quad.L),  1/(4*self.quad.b)],
@@ -162,9 +162,11 @@ class Controller_DDLQR_P2P(Controller_P2P):
             print('Disturbance matrix intersects the decoupling space.')
         # Apply overall controller
         E,V = sla.eig(A + B @ (self.K + self.F))
+        # print(*sorted(E.round(2), key=lambda z: z.real))
+        # print(self.K.round(1))
         U = np.dot(self.K + self.F, state)
         U[0] += self.quad.mass * self.quad.g * self.offset_gravity
-        u = np.clip(self.thrust_control_matrix @ U, self.THRUST_LIMITS[0], self.THRUST_LIMITS[1])
+        u = self.thrust_control_matrix @ U
         self.quad.set_thrusts(u)
 
 controller_defs = {

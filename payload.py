@@ -32,16 +32,17 @@ def state_dot(time, state, load):
 
 class Payload():
     
-    def __init__(self,defs,g=9.81):
+    def __init__(self,name,params,g=9.81):
         self.g = g
+        self.id = name
         self.state = np.zeros(12)
-        self.state[POS] = defs['position']
-        self.state[EUL] = defs['orientation']
-        self.x = defs['x']
-        self.y = defs['y']
-        self.z = defs['z']
-        self.mass = defs['mass']
-        self.hardpoints = np.array(defs['hardpoints']).transpose()
+        self.state[POS] = params['position']
+        self.state[EUL] = params['orientation']
+        self.x = params['x']
+        self.y = params['y']
+        self.z = params['z']
+        self.mass = params['mass']
+        self.hardpoints = np.array(params['hardpoints']).transpose()
         self.applied_forces = np.zeros_like(self.hardpoints)
         self.force_geometry = util.force_geometry(self.hardpoints) # concatenate before use as single array
         # From Wikipedia "List of moments of inertia"
