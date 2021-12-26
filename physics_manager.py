@@ -50,19 +50,26 @@ class PhysicsManager():
         else:
             curr_time = (self.pause_start - self.start).total_seconds() - self.time_paused
         if scaled == True:
-            return curr_time / self.time_scaling
+            return curr_time / self.time_scale
         else:
             return curr_time
     
     def visual_data(self):
-        data = {}
+        sim_data = {}
         for key in self.quads:
-            data[key] = dict([('position', self.quads[key].get_position()), ('orientation', self.quads[key].get_orientation())])
+            sim_data[key] = dict([('position', self.quads[key].get_position()), ('orientation', self.quads[key].get_orientation())])
         for key in self.loads:
-            data[key] = dict([('position', self.loads[key].get_position()), ('orientation', self.loads[key].get_orientation())])
+            sim_data[key] = dict([('position', self.loads[key].get_position()), ('orientation', self.loads[key].get_orientation())])
         for key,cable in self.cables.items():
-            data[key] = zip(cable.quad.get_position(), cable.load.get_hardpoint(cable.hardpoint_num))
-        return data
+            sim_data[key] = zip(cable.quad.get_position(), cable.load.get_hardpoint(cable.hardpoint_num))
+        graph_data = {"q1 position z (m)": self.quads['q1'].get_position()[2]}
+        # if len(self.loads) > 0:
+        #     ori = self.loads['p1'].get_orientation()
+        # else:
+        #     ori = self.quads['q1'].get_orientation()
+        # graph_data['Pitch (deg)'] = np.rad2deg(ori[1])
+        # graph_data['Roll (deg)'] = np.rad2deg(ori[0])
+        return (sim_data,graph_data)
     
     def get_update(self, dt):
         for quad in self.quads.values():
