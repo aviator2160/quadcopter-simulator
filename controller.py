@@ -12,18 +12,18 @@ EUL = slice(6,9)
 OMG = slice(9,12)
 
 def Controller(get_time, quad, params):
-    Specific_Controller = controller_defs.get(params['Type'])
+    Specific_Controller = controller_defs.get(params['type'])
     if Specific_Controller != None:
         return Specific_Controller(get_time, quad, params)
-    raise ControllerTypeNotFoundError(str(params['Type']) + " is not a recognized type of controller!")
+    raise ValueError(str(params['type']) + " is not a recognized type of controller!")
 
 class Controller_P2P(ABC):
     
     def __init__(self, get_time, quad, params):
         self.get_time = get_time
         self.quad = quad
-        self.dt = params['Timestep']
-        self.goals = params['Goals']
+        self.dt = params['timestep']
+        self.goals = params['goals']
         self.curr_goal = {'time': 0, 'position': (0,0,0), 'yaw': 0}
         self.update_num = 0
         self.initialize(params)
@@ -178,6 +178,3 @@ controller_defs = {
     'lqr_p2p': Controller_LQR_P2P,
     'dd_p2p': Controller_DDLQR_P2P,
     }
-
-class ControllerTypeNotFoundError(Exception):
-    pass

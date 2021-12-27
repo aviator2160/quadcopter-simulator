@@ -12,7 +12,7 @@ import time
 PAUSE_ON_START = True
 SHOW_TRAILS = True
 DARK_MODE = True
-PLOT_DATA = False
+PLOT_DATA = True
 
 class Sim_GUI():
     # 'quad_list' is a dictionary of format: quad_list = {'quad_1_name':{'position':quad_1_position,'orientation':quad_1_orientation,'arm_span':quad_1_arm_span}, ...}
