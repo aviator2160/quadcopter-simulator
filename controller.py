@@ -12,35 +12,39 @@ EUL = slice(6,9)
 OMG = slice(9,12)
 
 def Controller(get_time, quad, params):
-    Specific_Controller = controller_defs.get(params['type'])
+    Specific_Controller = controller_defs.get(params['Type'])
     if Specific_Controller != None:
         return Specific_Controller(get_time, quad, params)
-    raise ControllerTypeNotFoundError(str(params['type']) + " is not a recognized type of controller!")
+    raise ControllerTypeNotFoundError(str(params['Type']) + " is not a recognized type of controller!")
 
 class Controller_P2P(ABC):
     
     def __init__(self, get_time, quad, params):
         self.get_time = get_time
         self.quad = quad
-        self.goals = params['goals']
+        self.dt = params['Timestep']
+        self.goals = params['Goals']
         self.curr_goal = {'time': 0, 'position': (0,0,0), 'yaw': 0}
+        self.update_num = 0
         self.initialize(params)
     
-    def get_update(self, dt):
-        if (len(self.goals) > 0) and (self.get_time() > self.goals[0]['time']):
-            new_goal = self.goals.pop(0)
-            # new_goal might not contain all possible goals
-            for key in new_goal:
-                self.curr_goal[key] = new_goal[key]
-            print(self.quad.id + " goal: " + str(self.curr_goal))
-        self.update(dt)
+    def check_update(self, curr_time):
+        if curr_time > self.update_num * self.dt:
+            self.update_num += 1
+            if (len(self.goals) > 0) and (self.get_time() > self.goals[0]['time']):
+                new_goal = self.goals.pop(0)
+                # new_goal might not contain all possible goal types
+                for key in new_goal:
+                    self.curr_goal[key] = new_goal[key]
+                print(self.quad.id + " goal: " + str(self.curr_goal))
+            self.update()
     
     @abstractmethod
     def initialize(self, params):
         pass
     
     @abstractmethod
-    def update(self, dt):
+    def update(self):
         pass
 
 class Controller_PID_P2P(Controller_P2P):
@@ -58,10 +62,10 @@ class Controller_PID_P2P(Controller_P2P):
         self.linear_i_term = np.zeros(3)
         self.angular_i_term = np.zeros(3)
     
-    def update(self, dt):
+    def update(self):
         state = self.quad.get_state()
         linear_error = self.curr_goal['position'] - state[POS]
-        self.linear_i_term += self.LINEAR_I * linear_error * dt
+        self.linear_i_term += self.LINEAR_I * linear_error * self.dt
         cmd_thrust = self.LINEAR_P * linear_error - self.LINEAR_D * state[VEL] + self.linear_i_term
         throttle = cmd_thrust[2] + self.quad.mass * self.quad.g * self.offset_gravity / 4
         gamma = state[EUL][2]
@@ -70,7 +74,7 @@ class Controller_PID_P2P(Controller_P2P):
         dest_gamma = self.curr_goal['yaw']
         dest_eulers = np.array([dest_theta,dest_phi,dest_gamma])
         angular_error = util.wrap_angle(dest_eulers - state[EUL])
-        self.angular_i_term += self.ANGULAR_I * angular_error * dt
+        self.angular_i_term += self.ANGULAR_I * angular_error * self.dt
         cmd_torque = self.ANGULAR_P * angular_error - self.ANGULAR_D * state[OMG] + self.angular_i_term
         m1 = throttle + cmd_torque[1] + cmd_torque[2]
         m2 = throttle + cmd_torque[0] - cmd_torque[2]
@@ -97,7 +101,7 @@ class Controller_LQR_P2P(Controller_P2P):
         self.offset_gravity = params['offset_gravity']
         self.quad.set_thrusts(self.quad.mass * self.quad.g / 4 * np.ones(4))
     
-    def update(self, dt):
+    def update(self):
         state = np.zeros(12)
         state = self.quad.get_state().copy()
         state[POS] -= self.curr_goal['position']
@@ -139,7 +143,7 @@ class Controller_DDLQR_P2P(Controller_P2P):
         self.offset_gravity = params['offset_gravity']
         self.quad.set_thrusts(self.quad.mass * self.quad.g / 4 * np.ones(4))
     
-    def update(self, dt):
+    def update(self):
         state = np.zeros(12)
         state = self.quad.get_state().copy()
         state[POS] -= self.curr_goal['position']

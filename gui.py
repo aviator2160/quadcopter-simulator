@@ -12,15 +12,15 @@ import time
 PAUSE_ON_START = True
 SHOW_TRAILS = True
 DARK_MODE = True
-PLOT_DATA = True
+PLOT_DATA = False
 
 class Sim_GUI():
     # 'quad_list' is a dictionary of format: quad_list = {'quad_1_name':{'position':quad_1_position,'orientation':quad_1_orientation,'arm_span':quad_1_arm_span}, ...}
-    def __init__(self,QUAD_DEFS,LOAD_DEFS,CABLE_DEFS,get_visual_data,get_time):
+    def __init__(self,QUAD_DEFS,LOAD_DEFS,CABLE_DEFS,get_data,get_time):
         self.quads = QUAD_DEFS
         self.loads = LOAD_DEFS
         self.cables = CABLE_DEFS
-        self.get_visual_data = get_visual_data
+        self.get_data = get_data
         self.get_time = get_time
         self.fig = plt.figure()
         # Sim subplot
@@ -94,7 +94,7 @@ class Sim_GUI():
     def init_graph_plot(self):
         blit_artists = []
         self.lines = {}
-        (_,graph_data) = self.get_visual_data()
+        (_,graph_data) = self.get_data()
         for key in graph_data:
             self.lines[key], = self.axd.plot([],[])
             blit_artists.append(self.lines[key])
@@ -102,7 +102,7 @@ class Sim_GUI():
         return blit_artists
     
     def update(self,i):
-        (sim_data,graph_data) = self.get_visual_data()
+        (sim_data,graph_data) = self.get_data()
         self.update_sim(sim_data)
         if PLOT_DATA:
             update_graph_size = self.update_graph(graph_data)

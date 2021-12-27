@@ -18,7 +18,6 @@ DEFAULT_SIM = 'single_lqr_p2p'
 HEADLESS = False
 TIME_SCALING = 1.0 # Any positive number(Smaller is faster). 1.0->Real Time, 0.0->Run as fast as possible
 PHYSICAL_DYNAMICS_UPDATE = 0.01 # seconds
-CONTROLLER_DYNAMICS_UPDATE = 0.05 # seconds
 
 def run_sim(params):
     # get object definitions if they exist, else return empty dict
@@ -33,7 +32,7 @@ def run_sim(params):
     # Catch Ctrl+C to stop threads
     signal.signal(signal.SIGINT, phys.on_keyboard_interrupt)
     # Start the threads
-    phys.start_threads(phys_dt=PHYSICAL_DYNAMICS_UPDATE, ctrl_dt=CONTROLLER_DYNAMICS_UPDATE, time_scaling=TIME_SCALING)
+    phys.start_threads(dt=PHYSICAL_DYNAMICS_UPDATE, time_scale=TIME_SCALING)
     # Update the GUI while switching between destination poitions
     if HEADLESS:
         phys.wait_until_time(params['SIM_DURATION'])

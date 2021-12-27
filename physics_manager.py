@@ -7,19 +7,19 @@ Created on Thu Jul  1 15:00:02 2021
 from quadcopter import Quadcopter
 from payload import Payload
 from cable import Cable
-import controller
+from controller import Controller
 
 import numpy as np
 import datetime
 import time
 import threading
 
-WINDY = True
+WINDY = False
 WIND_Z = False
 WIND_FORCE = (0,0,0)
-WIND_NOISE = 0 # 20
+WIND_NOISE = 10
 VORTEX_TORQUE = (0,0,0)
-VORTEX_NOISE = 0.0
+VORTEX_NOISE = 0
 
 class PhysicsManager():
     """
@@ -29,19 +29,19 @@ class PhysicsManager():
     
     def __init__(self,QUAD_DEFS,LOAD_DEFS,CABLE_DEFS,CTRL_DEFS):
         self.WAIT_WAKE_RATE = 0.02
-        self.time_scaling_EPSILON = 0.01
+        self.TIME_SCALE_EPSILON = 0.01
         self.quads = {}
-        for key in QUAD_DEFS:
-            self.quads[key] = Quadcopter(name=key,defs=QUAD_DEFS[key])
-        self.ctrls = {}
-        for key in CTRL_DEFS:
-            self.ctrls[key] = controller.Controller(get_time=self.get_time,quad=self.quads[key],params=CTRL_DEFS[key])
+        for key,defs in QUAD_DEFS.items():
+            self.quads[key] = Quadcopter(name=key,params=defs)
         self.loads = {}
-        for key in LOAD_DEFS:
-            self.loads[key] = Payload(LOAD_DEFS[key])
+        for key,defs in LOAD_DEFS.items():
+            self.loads[key] = Payload(name=key,params=defs)
         self.cables = {}
         for key,defs in CABLE_DEFS.items():
-            self.cables[key] = Cable(self.quads[defs['quad']],self.loads[defs['load']],defs['hardpoint'],defs['stiffness'],defs['damping'])
+            self.cables[key] = Cable(self.quads[defs['quad']],self.loads[defs['load']],params=defs)
+        self.ctrls = {}
+        for key,defs in CTRL_DEFS.items():
+            self.ctrls[key] = Controller(get_time=self.get_time,quad=self.quads[key],params=defs)
         np.random.seed(1234)
     
     def get_time(self, scaled=True):
@@ -71,18 +71,20 @@ class PhysicsManager():
         # graph_data['Roll (deg)'] = np.rad2deg(ori[0])
         return (sim_data,graph_data)
     
-    def get_update(self, dt):
-        for quad in self.quads.values():
-            if WINDY:
-                (wind,vortex) = self.get_wind()
-                quad.add_external_force(wind)
-                quad.add_external_torque(vortex)
-            quad.update(dt)
-            quad.set_external_force(np.zeros(3))
-        for load in self.loads.values():
-            load.update(dt)
-        for cable in self.cables.values():
-            cable.update(dt)
+    def check_update(self, curr_time):
+        if curr_time > self.update_num * self.dt:
+            self.update_num += 1
+            for quad in self.quads.values():
+                if WINDY:
+                    (wind,vortex) = self.get_wind()
+                    quad.add_external_force(wind)
+                    quad.add_external_torque(vortex)
+                quad.update(self.dt)
+                quad.set_external_force(np.zeros(3))
+            for load in self.loads.values():
+                load.update(self.dt)
+            for cable in self.cables.values():
+                cable.update(self.dt)
     
     def get_wind(self):
         wind = WIND_FORCE + np.random.normal(0,WIND_NOISE,3)
@@ -93,33 +95,28 @@ class PhysicsManager():
             vortex[2] = 0
         return (wind,vortex)
     
-    def start_threads(self, phys_dt, ctrl_dt, time_scaling):
+    def start_threads(self, dt, time_scale):
         time.sleep(0.1) # Extra time to let GUI initialize
-        self.time_scaling = max(time_scaling, self.time_scaling_EPSILON)
+        self.dt = dt
+        self.time_scale = max(time_scale, self.TIME_SCALE_EPSILON)
         self.run = True
         self.pause = False
         self.start = datetime.datetime.now()
         self.pause_start = self.start
         self.time_paused = 0
-        self.phys_thread = threading.Thread(target=self.run_thread,args=(phys_dt,ctrl_dt))
+        self.phys_thread = threading.Thread(target=self.run_thread)
         self.phys_thread.start()
     
-    def run_thread(self, phys_dt, ctrl_dt):
-        phys_update_num = 0
-        ctrl_update_num = 0
+    def run_thread(self):
+        self.update_num = 0
         while(self.run==True):
             time.sleep(0)
             curr_time = self.get_time()
-            if curr_time > phys_update_num * phys_dt:
-                self.get_update(phys_dt)
-                phys_update_num += 1
-            if curr_time > ctrl_update_num * ctrl_dt:
-                for ctrl in self.ctrls.values():
-                    ctrl.get_update(ctrl_dt)
-                ctrl_update_num += 1
-        print(phys_update_num)
-        # print(self.get_time() / phys_update_num)
-        # print(ctrl_update_num)
+            self.check_update(curr_time)
+            for ctrl in self.ctrls.values():
+                ctrl.check_update(curr_time)
+        print(self.update_num)
+        # print(self.get_time() / self.update_num)
     
     def stop_threads(self):
         self.run = False
@@ -133,7 +130,7 @@ class PhysicsManager():
     
     def wait_until_time(self, end_time):
         while self.run:
-            remaining = (end_time - self.get_time()) * self.time_scaling
+            remaining = (end_time - self.get_time()) * self.time_scale
             if remaining <= 0:
                 break
             elif remaining < self.WAIT_WAKE_RATE:

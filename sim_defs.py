@@ -422,16 +422,19 @@ DEFAULT_CONTROLLERS = {
         'Angular_PID':{'P':[15,15,8],'I':[1,1,1],'D':[2,2,15]},
         'Linear_To_Angular_Scaler':[0.1,0.1,0],
         'offset_gravity': 1,
+        'Timestep': 0.05,
         },
     'lqr_p2p':{
         'Q': np.diag([1,1,50, 1,1,5, 10,10,0.1, 1,1,0.1]),
         'R': np.diag([1, 1,1,1]),
         'offset_gravity': 1,
+        'Timestep': 0.05,
         },
     'dd_p2p':{
         'Q': np.diag([1,1,50, 1,1,5, 10,10,0.1, 1,1,0.1]),
         'R': np.diag([1, 1,1,1]),
         'offset_gravity': 1,
+        'Timestep': 0.05,
         },
     }
 
