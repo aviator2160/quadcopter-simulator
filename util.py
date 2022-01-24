@@ -71,12 +71,12 @@ def wrap_angle(angle):
 
 def body_omega_to_euler_rates_matrix(angles):
     ct = np.cos(angles[0])
-    tt = np.tan(angles[0])
+    st = np.sin(angles[0])
     cp = np.cos(angles[1])
-    sp = np.sin(angles[1])
-    return np.array([[1,sp * tt,cp * tt],
-                     [0,     cp,    -sp],
-                     [0,sp / ct,cp / ct]])
+    tp = np.tan(angles[1])
+    return np.array([[1,st * tp,ct * tp],
+                     [0,     ct,    -st],
+                     [0,st / cp,ct / cp]])
 
 """
 Returns list of matrices based on the given matrix of moment arms (column
