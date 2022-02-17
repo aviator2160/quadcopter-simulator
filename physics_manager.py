@@ -8,6 +8,7 @@ from quadcopter import Quadcopter
 from payload import Payload
 from cable import Cable
 from controller import Controller
+from planner import Planner
 
 import numpy as np
 import datetime
@@ -27,7 +28,7 @@ class PhysicsManager():
     types of physics object.
     """
     
-    def __init__(self,QUAD_DEFS,LOAD_DEFS,CABLE_DEFS,CTRL_DEFS):
+    def __init__(self,QUAD_DEFS,LOAD_DEFS,CABLE_DEFS,CTRL_DEFS,PLANNER_DEFS):
         self.WAIT_WAKE_RATE = 0.02
         self.TIME_SCALE_EPSILON = 0.01
         self.quads = {}
@@ -42,6 +43,12 @@ class PhysicsManager():
         self.ctrls = {}
         for key,defs in CTRL_DEFS.items():
             self.ctrls[key] = Controller(get_time=self.get_time,quad=self.quads[key],params=defs)
+        self.planners = {}
+        for key,defs in PLANNER_DEFS.items():
+            self.planners[key] = Planner(quads=[self.quads.get(key) for key in defs.get('quads',[])],
+                                         loads=[self.loads.get(key) for key in defs.get('loads',[])],
+                                         cables=[self.cables.get(key) for key in defs.get('cables',[])],
+                                         params=defs)
         np.random.seed(1234)
     
     def get_time(self, scaled=True):
@@ -113,6 +120,8 @@ class PhysicsManager():
             time.sleep(0)
             curr_time = self.get_time()
             self.check_update(curr_time)
+            for planner in self.planners.values():
+                planner.check_update(curr_time)
             for ctrl in self.ctrls.values():
                 ctrl.check_update(curr_time)
         print(self.update_num)

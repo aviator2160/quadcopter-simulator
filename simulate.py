@@ -43,6 +43,8 @@ def run_sim(params, headless, time_scale, timestep):
             'PAYLOAD_DEFS':    Defines all payloads in the scene.
             'CABLE_DEFS':      Defines all cables linking quadcopters to payloads.
             'CONTROLLER_DEFS:' Defines controllers of individual quadcopters.
+            'PLANNER_DEFS:'    Defines team-wide controllers of one or several
+                                 quadcopters carrying payloads collectively.
         headless:
             If true, the simulation runs in "headless mode": the GUI is not
             shown and the simulation occurs in the background. Headless mode
@@ -64,8 +66,9 @@ def run_sim(params, headless, time_scale, timestep):
     loads  = params.get('PAYLOAD_DEFS',    {})
     cables = params.get('CABLE_DEFS',      {})
     ctrls  = params.get('CONTROLLER_DEFS', {})
+    planners = params.get('PLANNER_DEFS',  {})
     
-    phys = PhysicsManager(quads, loads, cables, ctrls)
+    phys = PhysicsManager(quads, loads, cables, ctrls, planners)
     if not headless:
         sim_view = gui.Sim_GUI(quads, loads, cables,
                                get_data=phys.visual_data,

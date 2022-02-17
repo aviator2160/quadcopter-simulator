@@ -137,4 +137,3 @@ class Quadcopter():
         A[EUL,OMG] = np.ones((3,3))         # Euler rates <- angular velocity
         A[EUL,OMG][1:3,0] = np.zeros((2,)) #   body-x angular rate only affects roll rate
         A[OMG,OMG] = np.ones((3,3))         # angular velocity rate <- angular velocity
-        

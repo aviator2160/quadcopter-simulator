@@ -6,6 +6,50 @@ Definitions of all simulator scenes
 
 import numpy as np
 
+Multi_Slung_LQR_Team = {
+    'SIM_DURATION': 8, # simulated seconds
+    # Define the quadcopters
+    'QUADCOPTER_DEFS':{
+        'q1':{'position':[-1, 1,4],},
+        'q2':{'position':[-3, 1,4],},
+        'q3':{'position':[-3,-1,4],},
+        'q4':{'position':[-1,-1,4],},
+        },
+    'PAYLOAD_DEFS':{
+        'p1':{
+            'position':[-2,0,2],'orientation':[0,0,0],'x': 0.4,'y': 0.4,'z': 0.2,'mass': 4.0,
+            'hardpoints':[[0.2,0.2,0],[-0.2,0.2,0],[-0.2,-0.2,0],[0.2,-0.2,0]]
+            },
+        },
+    'CABLE_DEFS':{
+        'c1':{'quad':'q1','load':'p1','hardpoint': 0},
+        'c2':{'quad':'q2','load':'p1','hardpoint': 1},
+        'c3':{'quad':'q3','load':'p1','hardpoint': 2},
+        'c4':{'quad':'q4','load':'p1','hardpoint': 3},
+        },
+    # Controller parameters
+    'CONTROLLER_DEFS':{
+        'q1':{'type':'lqr_p2p','goals':[{'time': 0,'position':(3, 2,5)}],},
+        'q2':{'type':'lqr_p2p','goals':[{'time': 0,'position':(-1, 2,5)}],},
+        'q3':{'type':'lqr_p2p','goals':[{'time': 0,'position':(-1,-2,5)}],},
+        'q4':{'type':'lqr_p2p','goals':[{'time': 0,'position':(3,-2,5)}],},
+        },
+    # Team-wide controller
+    # 'PLANNER_DEFS':{
+    #     'planner':{
+    #         'type':'lqr_team',
+    #         'goal':[1,0,4],
+    #         'quads':['q1','q2'], # ,'q3','q4'],
+    #         # 'loads':['p1'],
+    #         # 'cables':['c1','c2','c3','c4'],
+    #         'quad_Q': np.diag([1,1,50, 1,1,5, 10,10,0.1, 1,1,0.1]), # np.diag([0,0,0, 0.1,0.1,0.1, 10,10,0.1, 1,1,0.1]),
+    #         # 'load_Q': np.zeros([12,12]), # np.diag([1,1,50, 1,1,5, 10,10,0.1, 1,1,0.1]),
+    #         'R': np.eye(4) * 0.1,
+    #         'offset_gravity': 1, # Fraction of quad weight
+    #         },
+    #     },
+    }
+
 Multi_Slung_LQR_P2P = {
     'SIM_DURATION': 8, # simulated seconds
     # Define the quadcopters
@@ -419,6 +463,7 @@ DEFAULT_CONTROLLERS = {
     }
 
 defs = {
+    'multi_slung_lqr_team': Multi_Slung_LQR_Team,
     'multi_slung_lqr_p2p': Multi_Slung_LQR_P2P,
     'multi_slung_pid_p2p': Multi_Slung_PID_P2P,
     'slung_lqr_p2p':  Slung_LQR_P2P,
