@@ -69,7 +69,7 @@ class PhysicsManager():
             sim_data[key] = dict([('position', self.loads[key].get_position()), ('orientation', self.loads[key].get_orientation())])
         for key,cable in self.cables.items():
             sim_data[key] = zip(cable.quad.get_position(), cable.load.get_hardpoint(cable.hardpoint_num))
-        graph_data = {"q1 position z (m)": self.quads['q1'].get_position()[2]}
+        graph_data = {"p1 z pos": self.loads['p1'].get_linear_rate()[2]}
         # if len(self.loads) > 0:
         #     ori = self.loads['p1'].get_orientation()
         # else:

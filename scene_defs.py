@@ -22,10 +22,10 @@ Multi_Slung_LQR_Team = {
             },
         },
     'CABLE_DEFS':{
-        'c1':{'quad':'q1','load':'p1','hardpoint': 0},
-        'c2':{'quad':'q2','load':'p1','hardpoint': 1},
-        'c3':{'quad':'q3','load':'p1','hardpoint': 2},
-        'c4':{'quad':'q4','load':'p1','hardpoint': 3},
+        'c1':{'quad':'q1','load':'p1','hardpoint': 0,'joint': True},
+        'c2':{'quad':'q2','load':'p1','hardpoint': 1,'joint': True},
+        'c3':{'quad':'q3','load':'p1','hardpoint': 2,'joint': True},
+        'c4':{'quad':'q4','load':'p1','hardpoint': 3,'joint': True},
         },
     # Controller parameters
     'CONTROLLER_DEFS':{
@@ -451,7 +451,7 @@ DEFAULT_CONTROLLERS = {
     'lqr_p2p':{
         'Q': np.diag([1,1,50, 1,1,5, 10,10,0.1, 1,1,0.1]),
         'R': np.diag([1, 1,1,1]),
-        'offset_gravity': 1,
+        'offset_gravity': 2,
         'timestep': 0.05,
         },
     'dd_p2p':{

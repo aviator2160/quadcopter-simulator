@@ -18,9 +18,9 @@ import argparse
 
 # Constants
 
-DEFAULT_SCENE = 'test'
+DEFAULT_SCENE = 'multi_slung_lqr_team'
 DEFAULT_HEADLESS = False
-DEFAULT_TIME_SCALE = 1.0  # Any positive number(Smaller is faster).
+DEFAULT_TIME_SCALE = 4.0  # Any positive number(Smaller is faster).
                             # 1.0->Real Time, 0.0->Run as fast as possible
 DEFAULT_DYNAMICS_TIMESTEP = 0.01  # seconds
 
